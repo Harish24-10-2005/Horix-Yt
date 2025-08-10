@@ -1,0 +1,19 @@
+{
+  "job_id": "dcacc76e7439",
+  "title": "gg",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "gg",
+  "created_ts": 1754822228.856,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1754822229.085,
+      "info": {
+        "channel_type": "gg"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

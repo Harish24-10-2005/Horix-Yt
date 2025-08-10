@@ -1,0 +1,20 @@
+{
+  "job_id": "f21c1838bf76",
+  "title": "gg",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "gg",
+  "created_ts": 1754821059.386,
+  "stages": {
+    "scripts": {
+      "success": true,
+      "ts": 1754821059.431,
+      "info": {
+        "voice_scripts": 4,
+        "fake": true
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

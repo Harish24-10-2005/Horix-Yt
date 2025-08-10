@@ -1,0 +1,136 @@
+# ---------------------------
+# Global / System
+# ---------------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------------
+# Python Bytecode / Caches
+# ---------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+.pytest_cache/
+.cache/
+
+# ---------------------------
+# Virtual Environments
+# (project appears to keep a venv inside repo)
+# ---------------------------
+.env
+.venv/
+venv/
+ENV/
+env/
+Scripts/
+Lib/
+Include/
+pyvenv.cfg
+
+# ---------------------------
+# Packaging / Build artifacts
+# ---------------------------
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ---------------------------
+# Logs / Temp / Misc
+# ---------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.orig
+
+# Coverage / Reports
+htmlcov/
+coverage.xml
+.coverage*
+
+# ---------------------------
+# Jupyter
+# ---------------------------
+.ipynb_checkpoints/
+
+# ---------------------------
+# IDE / Tooling
+# ---------------------------
+.vscode/
+.idea/
+*.code-workspace
+
+# ---------------------------
+# Media & Generated Outputs
+# ---------------------------
+# Primary output folders (generated videos, images, subtitles, etc.)
+output/
+share/
+sampleoutput/
+
+# Generated or example large media (remove if you want them tracked)
+VoiceScriptsExample/
+
+# Subtitles / transcripts
+*.srt
+*.vtt
+
+# Large media types (keep if truly source assets)
+*.mp4
+*.mov
+*.avi
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+
+# Intermediate generation artifacts
+modified_image.png
+music_sync_cache.json
+
+# ---------------------------
+# Assets (selective)
+# If you have curated assets you WANT in git, remove these lines.
+# assets/music/ and assets/images/ might contain large generated files.
+# Comment out if you need them versioned.
+# assets/music/
+# assets/images/
+
+# ---------------------------
+# Static build output (uncomment if build produces these)
+# ---------------------------
+# static/
+
+# ---------------------------
+# Secrets / Config (adjust carefully)
+# ---------------------------
+*.env
+.env.*
+.envrc
+# If Config/LLMs contains API keys or private settings, ignore them:
+Config/LLMs/*
+
+# Allow a template example to be checked in (uncomment if you add one)
+#!Config/LLMs/example.config.json
+
+# ---------------------------
+# Lock files (optional – keep if you rely on reproducibility)
+# ---------------------------
+# poetry.lock
+# Pipfile.lock
+
+# ---------------------------
+# Misc
+# ---------------------------
+*.crdownload
+*.part
+
+# END OF FILE

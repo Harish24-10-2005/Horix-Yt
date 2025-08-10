@@ -1,0 +1,19 @@
+{
+  "job_id": "74f240dbe35c",
+  "title": "biriyani",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "food tutorial",
+  "created_ts": 1754814531.557,
+  "stages": {
+    "scripts": {
+      "success": true,
+      "ts": 1754814588.541,
+      "info": {
+        "voice_scripts": 10
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

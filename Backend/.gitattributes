@@ -1,0 +1,67 @@
+# Enforce consistent line endings for text files
+* text=auto eol=lf
+
+# Explicitly set text for common source/config types
+*.py text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+
+# Notebooks (keep LF to reduce noisy diffs)
+*.ipynb text eol=lf
+
+# Shell / batch scripts
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.bat text eol=crlf
+
+# Binary assets (no EOL conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.svg text eol=lf
+*.ico binary
+
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.wav binary
+*.mp3 binary
+*.flac binary
+*.m4a binary
+*.ogg binary
+
+*.ttf binary
+*.otf binary
+
+*.exe binary
+*.dll binary
+*.pyd binary
+
+# Model / data binaries
+*.bin binary
+*.pt binary
+*.pth binary
+*.ckpt binary
+*.npz binary
+*.npy binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+
+# Prevent diff for large generated subtitle/media if accidentally added
+*.srt text eol=lf
+*.vtt text eol=lf
+
+# END

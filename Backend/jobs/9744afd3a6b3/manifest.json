@@ -1,0 +1,19 @@
+{
+  "job_id": "9744afd3a6b3",
+  "title": "ff",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "f",
+  "created_ts": 1754820225.471,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1754820225.638,
+      "info": {
+        "channel_type": "f"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

@@ -1,0 +1,9 @@
+export { Step1Create } from './Step1Create';
+export { Step2Content } from './Step2Content';
+export { Step3Scripts } from './Step3Scripts';
+export { Step4Images } from './Step4Images';
+export { Step5Voices } from './Step5Voices';
+export { Step6Edit } from './Step6Edit';
+export { Step7Music } from './Step7Music';
+export { Step8Captions } from './Step8Captions';
+export { Step9Final } from './Step9Final';

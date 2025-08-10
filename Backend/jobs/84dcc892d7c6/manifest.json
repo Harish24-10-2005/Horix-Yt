@@ -1,0 +1,20 @@
+{
+  "job_id": "84dcc892d7c6",
+  "title": "ss",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "ss",
+  "created_ts": 1754818899.968,
+  "stages": {
+    "scripts": {
+      "success": true,
+      "ts": 1754818899.994,
+      "info": {
+        "voice_scripts": 4,
+        "fake": true
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}
