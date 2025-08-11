@@ -1,0 +1,20 @@
+{
+  "job_id": "24d1c69cb151",
+  "title": "tom and jerry story ",
+  "video_mode": true,
+  "user_id": "12187a55-18e3-4354-8a47-a607ea939a3c",
+  "channel_type": "kids",
+  "created_ts": 1754936949.975,
+  "stages": {
+    "scripts": {
+      "success": true,
+      "ts": 1754937015.097,
+      "info": {
+        "voice_scripts": 10,
+        "fake": false
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

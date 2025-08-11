@@ -24,10 +24,12 @@ class User(Base):
     id = Column(String, primary_key=True)  # supply UUID from app
     email = Column(String, unique=True, index=True, nullable=False)
     display_name = Column(String, nullable=True)
-    password_hash = Column(String, nullable=True)  # null for oauth users later
+    password_hash = Column(String, nullable=True)  # new for auth (nullable for legacy rows)
+    avatar_filename = Column(String, nullable=True)
+    api_keys = Column(JSON, default=dict, nullable=False)  # per-user provider keys (stored plain for now)
+    theme_pref = Column(String, nullable=True)  # 'light' | 'dark' (null => default frontend)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     jobs = relationship('Job', back_populates='user', cascade='all,delete')
-    videos = relationship('VideoAsset', back_populates='user', cascade='all,delete')
 
 class Job(Base):
     __tablename__ = 'jobs'
@@ -43,19 +45,6 @@ class Job(Base):
     meta = Column(JSON, default=dict, nullable=False)
     user = relationship('User', back_populates='jobs')
 
-class VideoAsset(Base):
-    __tablename__ = 'video_assets'
-    id = Column(String, primary_key=True)  # uuid
-    user_id = Column(String, ForeignKey('users.id', ondelete='CASCADE'), index=True, nullable=False)
-    job_id = Column(String, ForeignKey('jobs.id', ondelete='SET NULL'), nullable=True)
-    title = Column(String, nullable=False)
-    path = Column(String, nullable=False)
-    thumbnail = Column(String, nullable=True)
-    duration_sec = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    meta = Column(JSON, default=dict, nullable=False)
-    user = relationship('User', back_populates='videos')
-
 # Simple engine helper (local sqlite by default)
 _engine = None
 SessionLocal = None
@@ -66,6 +55,21 @@ def init_db(database_url: str = 'sqlite:///./app.db'):
     _engine = create_engine(database_url, future=True)
     SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False, future=True)
     Base.metadata.create_all(_engine)
+    # Simple runtime migration: add password_hash column if missing (SQLite only)
+    try:
+        with _engine.connect() as conn:
+            res = conn.exec_driver_sql("PRAGMA table_info(users)")
+            cols = [r[1] for r in res]
+            if 'password_hash' not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN password_hash VARCHAR")
+            if 'avatar_filename' not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN avatar_filename VARCHAR")
+            if 'api_keys' not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN api_keys JSON DEFAULT '{}' ")
+            if 'theme_pref' not in cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN theme_pref VARCHAR")
+    except Exception:
+        pass
     return _engine
 
 # Dependency (FastAPI style) - if later integrated

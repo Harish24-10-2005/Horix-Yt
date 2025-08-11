@@ -1,0 +1,19 @@
+{
+  "job_id": "780a1f89966d",
+  "title": "Test Title",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "Tech",
+  "created_ts": 1754930768.861,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1754930768.875,
+      "info": {
+        "channel_type": "Tech"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

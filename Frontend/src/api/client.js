@@ -4,6 +4,19 @@ const DEFAULT_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000/ap
 async function request(path, { method = 'GET', headers = {}, body, json = true, formData } = {}) {
   const url = `${DEFAULT_BASE}${path}`;
   let options = { method, headers: { ...headers } };
+  try {
+    const rawAuth = sessionStorage.getItem('auth') || localStorage.getItem('auth');
+    if (rawAuth) {
+      const parsed = JSON.parse(rawAuth);
+      if (parsed?.user_id) {
+        // Backend expects custom header x_user_id (underscore variant)
+        options.headers['x_user_id'] = parsed.user_id;
+      }
+      if (parsed?.token) {
+        options.headers['Authorization'] = `Bearer ${parsed.token}`; // reserved for future secured endpoints
+      }
+    }
+  } catch (_) {}
   if (formData) {
     options.body = formData; // browser sets multipart headers automatically
   } else if (body !== undefined) {

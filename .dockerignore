@@ -1,0 +1,76 @@
+##############################
+# Root Docker Ignore (Horix-YT)
+# Purpose: shrink build context & keep images lean.
+# NOTE: Only excludes generated / environment / cache artifacts.
+#       Source code, requirements, package.json remain included.
+##############################
+
+# VCS
+.git
+.git/**
+.gitignore
+
+# Python bytecode / caches
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Virtual environments / local tooling
+Backend/.venv/
+Backend/venv/
+Backend/Scripts/
+
+# Local DB (override with volume in compose instead of baking into image)
+Backend/app.db
+
+# Generated runtime artifacts (videos, jobs, temp media)
+Backend/output/
+Backend/jobs/
+Backend/assets/images/*
+Backend/assets/VoiceScripts/*
+Backend/assets/music/*
+# Keep avatars (user uploaded) out of base image; typically volume-mounted
+Backend/assets/avatars/*
+
+# Logs / coverage
+**/*.log
+Backend/.coverage
+Backend/coverage.xml
+
+# Node modules & build output
+Frontend/node_modules/
+Frontend/build/
+Frontend/.cache/
+Frontend/.parcel-cache/
+
+# Misc OS/editor
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Temporary archives
+*.tar
+*.tar.gz
+*.zip
+*.tmp
+
+# Sensitive / env (supply via Docker secrets or compose env)
+.env
+Backend/.env
+
+# Avoid copying test data into runtime image (tests run in CI stage)
+Backend/test_*.py
+Backend/smoke_test.py
+Backend/test.py
+
+# Exclude top-level output & jobs duplicates if present
+output/
+jobs/
+
+##############################
+# End
+##############################

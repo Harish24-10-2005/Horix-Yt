@@ -25,49 +25,57 @@ class Settings:
     """
 
     def __init__(self) -> None:
-        # API keys
+        # ---- API keys ----
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
         self.GROQ_API_KEY1 = os.getenv("GROQ_API_KEY1")
         self.GROQ_API_KEY2 = os.getenv("GROQ_API_KEY2")
         self.GROQ_API_KEY3 = os.getenv("GROQ_API_KEY3")
 
-        # Tooling binaries
+        # ---- Tooling binaries ----
         self.FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
         self.FFPROBE_PATH = os.getenv("FFPROBE_PATH", "ffprobe")
 
-        # Directories
+        # ---- Directories ----
         self.ASSETS_DIR = os.getenv("ASSETS_DIR", "assets")
         self.IMAGES_DIR = os.getenv("IMAGES_DIR", os.path.join(self.ASSETS_DIR, "images"))
         self.VOICES_DIR = os.getenv("VOICES_DIR", os.path.join(self.ASSETS_DIR, "VoiceScripts"))
         self.MUSIC_DIR = os.getenv("MUSIC_DIR", os.path.join(self.ASSETS_DIR, "music"))
         self.OUTPUT_DIR = os.getenv("OUTPUT_DIR", "output")
+        self.USER_OUTPUT_DIR = os.getenv("USER_OUTPUT_DIR", os.path.join(self.OUTPUT_DIR, "users"))
+        self.AVATARS_DIR = os.getenv("AVATARS_DIR", os.path.join(self.ASSETS_DIR, "avatars"))
         self.JOBS_DIR = os.getenv("JOBS_DIR", "jobs")
 
-        # Flags
+        # ---- Flags ----
         self.CLEAN_ON_START = os.getenv("CLEAN_ON_START", "false").lower() == "true"
 
         self.ensure_directories()
 
+    # ---- Helpers ----
     def ensure_directories(self) -> None:
-        for d in {self.ASSETS_DIR, self.IMAGES_DIR, self.VOICES_DIR, self.MUSIC_DIR, self.OUTPUT_DIR, self.JOBS_DIR}:
+        dirs = [
+            self.ASSETS_DIR,
+            self.IMAGES_DIR,
+            self.VOICES_DIR,
+            self.MUSIC_DIR,
+            self.OUTPUT_DIR,
+            self.JOBS_DIR,
+            self.USER_OUTPUT_DIR,
+            self.AVATARS_DIR,
+        ]
+        for d in dirs:
             os.makedirs(d, exist_ok=True)
 
     # ---- External binary resolution ----
     def get_ffmpeg(self) -> str:
-        # If a directory was provided, append executable name
         if os.path.isdir(self.FFMPEG_PATH):
-            candidate = os.path.join(self.FFMPEG_PATH, 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg')
-            return candidate
+            return os.path.join(self.FFMPEG_PATH, 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg')
         return self.FFMPEG_PATH
 
     def get_ffprobe(self) -> str:
         if os.path.isdir(self.FFPROBE_PATH):
-            candidate = os.path.join(self.FFPROBE_PATH, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
-            return candidate
-        # If only FFMPEG_PATH dir set and no specific FFPROBE_PATH, reuse
+            return os.path.join(self.FFPROBE_PATH, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
         if self.FFPROBE_PATH == 'ffprobe' and os.path.isdir(self.FFMPEG_PATH):
-            candidate = os.path.join(self.FFMPEG_PATH, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
-            return candidate
+            return os.path.join(self.FFMPEG_PATH, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
         return self.FFPROBE_PATH
 
 

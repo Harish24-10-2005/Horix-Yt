@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { GalleryPage } from './src/components/GalleryPage';
-import { AuthForms } from './src/components/AuthForms';
     import ReactDOM from 'react-dom';
     import styled, { createGlobalStyle, ThemeProvider } from 'styled-components';
     import { motion, AnimatePresence } from 'framer-motion';
@@ -797,7 +794,7 @@ import { AuthForms } from './src/components/AuthForms';
     };
 
     // --- Main App Component ---
-  function InnerApp() {
+    function App() {
       const [currentStep, setCurrentStep] = useState(1);
       const [loading, setLoading] = useState(false);
       const [error, setError] = useState(null);
@@ -1104,14 +1101,6 @@ import { AuthForms } from './src/components/AuthForms';
         setTimeout(() => ripple.remove(), 600);
       };
 
-      const { user, logout, addAsset } = useAuth();
-      const [view,setView] = useState('pipeline'); // pipeline | gallery | auth
-
-      const saveVideoToGallery = async ()=>{
-        if(!finalVideo || !title) return;
-        try { await addAsset({ title: title || 'Untitled Video', path: finalVideo }); alert('Saved to gallery'); } catch(e){ alert(e.message); }
-      };
-
       return (
         <ThemeProvider theme={theme}>
           <GlobalStyle />
@@ -1123,10 +1112,6 @@ import { AuthForms } from './src/components/AuthForms';
                   <NavLink href="#features">Features</NavLink>
                   <NavLink href="#pricing">Pricing</NavLink>
                   <NavLink href="#support">Support</NavLink>
-                  <NavLink as="button" style={{background:'none',border:'none',cursor:'pointer'}} onClick={()=>setView('pipeline')}>Create</NavLink>
-                  <NavLink as="button" style={{background:'none',border:'none',cursor:'pointer'}} onClick={()=>setView('gallery')}>Gallery</NavLink>
-                  {!user && <NavLink as="button" style={{background:'none',border:'none',cursor:'pointer'}} onClick={()=>setView('auth')}>Sign In</NavLink>}
-                  {user && <NavLink as="button" style={{background:'none',border:'none',cursor:'pointer'}} onClick={()=>{logout(); setView('auth');}}>Logout</NavLink>}
                   <PrimaryButton as="a" href="#get-premium" {...buttonHoverTap} onClick={handleButtonClick}>
                     Get Premium
                   </PrimaryButton>
@@ -1136,13 +1121,7 @@ import { AuthForms } from './src/components/AuthForms';
                 </Nav>
               </HeaderContent>
             </Header>
-            {view !== 'pipeline' && (
-              <MainContent>
-               {view==='gallery' && <GalleryPage />}
-               {view==='auth' && <AuthForms />}
-              </MainContent>
-            )}
-            {view === 'pipeline' && <>
+
             <ProgressBarContainer style={{ '--progress-percent': `${(currentStep - 1) / 8}` }}>
               {Array.from({ length: 9 }, (_, i) => (
                 <ProgressStep
@@ -1615,7 +1594,7 @@ import { AuthForms } from './src/components/AuthForms';
                           </div>
                         )}
                       </VideoPreviewContainer>
-            {finalVideo && (
+                      {finalVideo && (
                         <DownloadSection>
                           <DownloadButton
                             href={finalVideo}
@@ -1625,7 +1604,6 @@ import { AuthForms } from './src/components/AuthForms';
                           >
                             <FiDownload /> Download Video
                           </DownloadButton>
-              {user && <PrimaryButton style={{marginLeft:'1rem'}} onClick={saveVideoToGallery}>Save to Gallery</PrimaryButton>}
                         </DownloadSection>
                       )}
                       <StepButtonsContainer style={{ justifyContent: 'center' }}>
@@ -1638,7 +1616,6 @@ import { AuthForms } from './src/components/AuthForms';
                 </StepContainer>
               </AnimatePresence>
             </MainContent>
-            </>}
 
             <Footer>
               <div className="footer-content">
@@ -1669,6 +1646,4 @@ import { AuthForms } from './src/components/AuthForms';
         </ThemeProvider>
       );
     }
-export default function App(){
-  return <AuthProvider><InnerApp /></AuthProvider>;
-}
+export default App;

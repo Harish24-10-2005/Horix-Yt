@@ -49,7 +49,7 @@ export function Step5Voices(){
           <input type="checkbox" checked={ownVoice} disabled={loading} onChange={e=>setOwnVoice(e.target.checked)} /> Use my own voice
         </CheckboxLabel>
         {ownVoice && (
-          <motion.label initial={{opacity:0}} animate={{opacity:1}} style={{display:'flex',alignItems:'center',gap:'.6rem',padding:'.65rem 1rem',background:'rgba(255,255,255,0.04)',border:'1px solid '+ 'rgba(255,255,255,0.08)',borderRadius:14}}>
+          <motion.label initial={{opacity:0}} animate={{opacity:1}} style={{display:'flex',alignItems:'center',gap:'.6rem',padding:'.65rem 1rem',background:'rgba(255,255,255,0.04)',border:`1px solid rgba(255,255,255,0.08)`,borderRadius:14}}>
             <FiUpload />
             <input type="file" accept="audio/mpeg,audio/wav" onChange={e=>setCustomFile(e.target.files[0])} disabled={loading} />
           </motion.label>

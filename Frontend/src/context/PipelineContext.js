@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { api, assets } from '../api/client';
 
 const PipelineContext = createContext(null);
@@ -60,7 +60,11 @@ export function PipelineProvider({ children }) {
       if ((!imagePrompts || imagePrompts.length === 0) && Array.isArray(data.image_prompts_detailed)) {
         imagePrompts = data.image_prompts_detailed.map(p => (typeof p === 'string' ? p : (p.prompt || p.description || ''))).filter(Boolean);
       }
-      update({ scripts: { script: data.script || '', voiceScripts: data.voice_scripts || [], imagePrompts }, step: 3 });
+      let voiceScripts = data.voice_scripts || [];
+      if ((!voiceScripts || voiceScripts.length === 0) && Array.isArray(data.voice_scripts_detailed)) {
+        voiceScripts = data.voice_scripts_detailed.map(p => (typeof p === 'string' ? p : (p.text || p.script || ''))).filter(Boolean);
+      }
+      update({ scripts: { script: data.script || '', voiceScripts, imagePrompts }, step: 3 });
       stopLoading();
     } catch (e) { fail(e, 'Script generation failed'); }
   };

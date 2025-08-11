@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 from Router.Router import router
-from Router.auth import router as auth_router
+from Router.auth import auth_router
 from db.models import init_db
 
 # Create FastAPI app
@@ -49,6 +49,11 @@ app.include_router(auth_router)
 @app.get("/", response_class=HTMLResponse)
 async def get_home_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+# Lightweight health / readiness probe (used by Docker/Orchestrators)
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 # Run the app
 if __name__ == "__main__":

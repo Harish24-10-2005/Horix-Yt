@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight, FiEdit2, FiX, FiLoader, FiStar, FiZap, FiRefreshCw, FiZoomIn, FiZoomOut, FiLayers } from 'react-icons/fi';
 import { usePipeline } from '../../context/PipelineContext';
-import { AnimatedPanel, GradientButton, OutlineButton, fadeSlideUp, SectionLabel, SoftInput, StatBar, StatChip, TitleGlow, SmallLabel, IconBtn } from '../ui/motionPrimitives';
+import { AnimatedPanel, GradientButton, OutlineButton, fadeSlideUp, SectionLabel, StatBar, StatChip, TitleGlow, SmallLabel, IconBtn } from '../ui/motionPrimitives';
 
 const Title = styled(motion.h2)`margin:0 0 .6rem;text-align:center;font-size:clamp(1.8rem,3vw,2.4rem);background:${p=>p.theme.colors.gradientPrimary};-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;position:relative;`;
 const InfoBar = styled.div`font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;background:${p=>p.theme.colors.surface2};padding:.55rem 1rem;border-radius:${p=>p.theme.radii.md};display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;color:${p=>p.theme.colors.textSecondary};position:relative;`;
@@ -105,7 +105,7 @@ export function Step4Images(){
     baseSizeRef.current = {w:bw,h:bh};
   };
 
-  const clampPosition = ()=>{
+  const clampPosition = useCallback(()=>{
     const container = containerRef.current; if(!container) return; const {w:bw,h:bh} = baseSizeRef.current; if(!bw||!bh) return;
     const cw = container.clientWidth; const ch = container.clientHeight;
     const scaledW = bw * zoom; const scaledH = bh * zoom;
@@ -113,10 +113,10 @@ export function Step4Images(){
     const cx = Math.min(maxX, Math.max(-maxX, x.get()));
     const cy = Math.min(maxY, Math.max(-maxY, y.get()));
     if(cx !== x.get()) x.set(cx); if(cy !== y.get()) y.set(cy);
-  };
+  },[zoom, x, y]);
 
-  useEffect(()=>{ measureBaseSize(); clampPosition(); },[zoom, fullscreen, selected]);
-  useEffect(()=>{ const onResize = ()=>{ measureBaseSize(); clampPosition(); }; window.addEventListener('resize', onResize); return ()=> window.removeEventListener('resize', onResize); },[]);
+  useEffect(()=>{ measureBaseSize(); clampPosition(); },[zoom, fullscreen, selected, clampPosition]);
+  useEffect(()=>{ const onResize = ()=>{ measureBaseSize(); clampPosition(); }; window.addEventListener('resize', onResize); return ()=> window.removeEventListener('resize', onResize); },[clampPosition]);
   const onDrag = ()=>{ clampPosition(); };
   const handleImageLoad = (e)=>{ naturalRef.current = {w:e.target.naturalWidth,h:e.target.naturalHeight}; measureBaseSize(); clampPosition(); };
 

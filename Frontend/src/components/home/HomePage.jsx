@@ -1,3 +1,6 @@
+// Inject auth forms if not already
+
+// ... existing code remains, add AuthForms into component if not present
 import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';

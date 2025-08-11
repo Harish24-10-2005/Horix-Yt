@@ -1,0 +1,19 @@
+{
+  "job_id": "5f5afc63d93a",
+  "title": "Diagnose error",
+  "video_mode": true,
+  "user_id": null,
+  "channel_type": "Tech",
+  "created_ts": 1754930783.161,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1754930783.173,
+      "info": {
+        "channel_type": "Tech"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

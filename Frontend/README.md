@@ -1,6 +1,6 @@
-# YouTube Video Generator Frontend
+# Frontend (React 19) – Horix-YT
 
-A modern React application for generating complete YouTube videos using AI-driven backend services.
+Animated authenticated dashboard for AI‑assisted multi‑stage YouTube video generation, media gallery management (rename/delete with optimistic retry), avatar upload, and profile editing.
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -21,23 +21,26 @@ A modern React application for generating complete YouTube videos using AI-drive
 The YouTube Video Generator Frontend provides an interactive, guided workflow for content creators to generate scripts, images, voiceovers, background music, and assemble a complete video ready for YouTube upload.
 
 ## Architecture
-- **Framework:** React 19 (functional components & hooks)
-- **Styling:** Styled Components + Tailwind CSS
-- **Animations:** Framer Motion
-- **Icons:** React Icons
+- React 19 (functional + hooks)
+- styled-components for scoped styling
+- Framer Motion for transitions & gallery interactions
+- Context providers: AuthContext, Pipeline/Workflow (if present)
+- Optimistic UI + exponential backoff retry for gallery rename/delete
+
+Auth token stored in `sessionStorage` (short-lived tab session by design). All protected views gate on presence + validity of token.
 
 ### Frontend ↔ Backend Integration
-- **API Base URL:** defined in `src/App.js`:
-```js
-const API_ENDPOINT_BASE = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:8000/api/video';
-```
+- API bases configured via env:
+  - `REACT_APP_AUTH_BASE` (e.g. http://localhost:8000/api/auth)
+  - `REACT_APP_API_BASE` (video pipeline endpoints) – fallback defaults if omitted
 - **Environment Variables:** override default via `.env` (see below)
 - **API Calls:** use `fetch` with JSON request/response, centralized in `src/api` or directly in components.
 
 ## Environment Variables
-Create a `.env` file at project root:
+Example `.env`:
 ```
-REACT_APP_API_ENDPOINT=http://localhost:8000/api/video
+REACT_APP_AUTH_BASE=http://localhost:8000/api/auth
+REACT_APP_API_BASE=http://localhost:8000/api/video
 ```
 Restart the dev server after any changes.
 
@@ -70,18 +73,24 @@ youtube-video-gen-frontend/
 └── README.md
 ```
 
-## API Endpoints
-| Endpoint         | Method | Description                        | Request Body                                        | Response                                 |
-|------------------|--------|------------------------------------|-----------------------------------------------------|------------------------------------------|
-| `/content`       | POST   | Generate video ideas               | `{ title: string, channelType: string }`            | `{ ideas: string[] }`                    |
-| `/scripts`       | POST   | Generate script & image prompts    | `{ ideas: string[] }`                               | `{ script: string, imagePrompts: string[] }` |
-| `/images`        | POST   | Generate images from prompts       | `{ prompt: string }`                                | `{ images: string[] }`                   |
-| `/modify-image`  | POST   | Modify a selected image            | `{ imageId: string, prompt: string }`               | `{ modifiedUrl: string }`                |
-| `/voices`        | POST   | Generate or upload voiceovers      | `{ text: string, voiceType: string }`               | `{ audioUrl: string }`                   |
-| `/upload-music`  | POST   | Upload background music            | `FormData{'file': File}`                            | `{ musicUrl: string }`                   |
-| `/bgmusic`       | POST   | Merge music into video             | `{ videoId: string, musicUrl: string }`             | `{ videoWithMusicUrl: string }`          |
-| `/captions`      | POST   | Generate captions                  | `{ videoId: string }`                               | `{ captionsFile: string }`               |
-| `/video`         | GET    | Retrieve final assembled video      | Query param `?id=videoId`                           | Video file stream                       |
+## Core Backend Endpoints Consumed
+| Method | Path (base omitted) | Purpose |
+|--------|---------------------|---------|
+| POST | /auth/register | Create user |
+| POST | /auth/login | Obtain token |
+| GET  | /auth/me | Current user info |
+| PATCH| /auth/profile | Update profile fields |
+| POST | /auth/change-password | Change password |
+| POST | /video/content | Generate outline/content |
+| POST | /video/scripts | Generate scripts + prompts |
+| POST | /video/images | Image artifacts |
+| POST | /video/voices | Voice generation |
+| GET  | /gallery/{user_id} | List archived videos |
+| POST | /gallery/{user_id}/rename | Rename video |
+| DELETE | /gallery/{user_id}/{video_name} | Delete video |
+| GET | /gallery/{user_id}/thumb/{video_name} | Thumbnail |
+| POST | /avatar | Upload avatar |
+| GET | /avatar/{user_id} | Fetch avatar image |
 
 ### Sample API Call
 ```js
@@ -97,32 +106,31 @@ export async function fetchContent(title, channelType) {
 }
 ```
 
-## Data Flow & Workflow
-1. **User Input:** Title & channel type
-2. **POST `/content`:** returns idea list
-3. **POST `/scripts`:** returns script & prompts
-4. **POST `/images`:** generates images for each prompt
-5. **POST `/modify-image`:** optional image edits
-6. **POST `/voices`:** generates narration audio
-7. **POST `/upload-music` + `/bgmusic`:** upload and merge background music
-8. **POST `/captions`:** generate captions
-9. **GET `/video`:** download final assembled video
+## Workflow (Simplified)
+1. Auth gate (register / login) → token
+2. Enter generation flow: content → scripts (+image prompts) → images → voices → (optional) music & captions → edit assembly
+3. Final video archived under user gallery (appears after pipeline completes)
+4. Gallery operations (rename/delete) update UI optimistically
+5. Avatar upload updates backend; UI refresh forthcoming
 
 ## Customization & Theming
 - Toggle dark/light mode via the navbar switch
 - Update logos and meta tags in `public/index.html`
 
-## Deployment
-1. Build for production:
-   ```bash
-npm run build
+## Docker (via root compose)
+Frontend image built with multi-stage Node → nginx. Serve with backend:
+```powershell
+docker compose up -d --build
 ```
-2. Deploy the `build/` folder to any static hosting (Netlify, Vercel, S3, etc.)
+Frontend served at http://localhost:3000 (nginx), proxying API calls directly to backend base (CORS open by default; tighten for production).
 
 ## Troubleshooting
-- **CORS issues:** Ensure backend CORS is configured
-- **API errors:** Check browser console and backend logs
-- **Dependency issues:** Remove `node_modules` & `package-lock.json`, then `npm install`
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Infinite redirect to login | Token missing/expired | Re-login; clear sessionStorage |
+| Rename/delete stuck pending | Network or 4xx error | Inspect console; operation auto-retries 3x |
+| Avatar not updating | Cache | Hard refresh (Ctrl+F5); future auto-invalidation planned |
+| CORS failure | Wrong API base or backend down | Verify backend 8000 up & env vars correct |
 
 ## Contributing
 1. Fork repo
@@ -130,5 +138,8 @@ npm run build
 3. Commit & push
 4. Open a PR
 
+## Security Notes
+Current gallery/avatar requests not yet server-enforced for auth (planned). Avoid exposing public deployment until enforced.
+
 ## License
-MIT License
+MIT

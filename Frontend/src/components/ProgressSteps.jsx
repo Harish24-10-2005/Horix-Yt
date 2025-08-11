@@ -76,7 +76,7 @@ export function ProgressSteps(){
     <Wrapper aria-label="Progress" role="group">
       <TrackOuter>
         <Track ref={trackRef}>
-          {line.ready && <ProgressLineBase style={{['--line-left']:`${line.left}px`, ['--line-width']:`${line.width}px`}} />}
+          {line.ready && <ProgressLineBase style={{'--line-left':`${line.left}px`, '--line-width':`${line.width}px`}} />}
           {line.ready && (
             <>
               <ProgressLine layout key={step} initial={{left:line.left, width:0}} animate={{left:line.left, width:line.width}} transition={{type:'spring', stiffness:320, damping:34}} />

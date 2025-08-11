@@ -2,9 +2,14 @@ from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Background
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from datetime import datetime
+from PIL import Image
+import io
 import os
 import shutil
 from Controller.Controller import VideoGenerationController
+from Config.settings import settings
+from db.models import get_session, User
 from Agents.voiceGeneration import VoiceGenerator
 from jobs.job_utils import load_manifest, update_stage
 from db.models import get_session
@@ -326,3 +331,156 @@ async def get_final_video(file: Optional[str] = Query(None)):
         raise HTTPException(status_code=404, detail=f"Video not found at {video_path}")
     
     return FileResponse(video_path)
+
+# -------------------- User Gallery Endpoints --------------------
+
+def _safe_user_dir(user_id: str) -> str:
+    # Basic guard: allow alnum, dash, underscore only
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", user_id):
+        raise HTTPException(status_code=400, detail="Invalid user id")
+    user_dir = os.path.join(settings.USER_OUTPUT_DIR, user_id)
+    os.makedirs(user_dir, exist_ok=True)
+    return user_dir
+
+@router.get("/user/{user_id}/gallery", response_model=Dict[str, Any])
+async def list_user_gallery(user_id: str):
+    """List generated video artifacts for a user (local filesystem)."""
+    user_dir = _safe_user_dir(user_id)
+    items: List[Dict[str, Any]] = []
+    for fname in sorted(os.listdir(user_dir), reverse=True):
+        fpath = os.path.join(user_dir, fname)
+        if not os.path.isfile(fpath):
+            continue
+        if not fname.lower().endswith((".mp4", ".mov", ".mkv", ".webm", ".txt", ".srt")):
+            continue
+        stat = os.stat(fpath)
+        thumb_name = fname + ".jpg"
+        thumb_path = os.path.join(user_dir, thumb_name)
+        if fname.lower().endswith((".mp4",".mov",".mkv",".webm")) and not os.path.exists(thumb_path):
+            # Attempt thumbnail extraction (first frame) using moviepy fallback; if fails create placeholder
+            try:
+                from moviepy.editor import VideoFileClip  # type: ignore
+                with VideoFileClip(fpath) as clip:
+                    frame = clip.get_frame(min(1, clip.duration/2))
+                    img = Image.fromarray(frame)
+                    img.thumbnail((400,225))
+                    img.save(thumb_path, 'JPEG', quality=70)
+            except Exception:
+                try:
+                    # Placeholder gradient
+                    img = Image.new('RGB', (400,225), (30,25,45))
+                    img.save(thumb_path, 'JPEG', quality=70)
+                except Exception:
+                    pass
+        items.append({
+            "name": fname,
+            "size": stat.st_size,
+            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            "url": f"/api/video/user/{user_id}/gallery/file/{fname}",
+            "thumbnail": f"/api/video/user/{user_id}/gallery/thumb/{thumb_name}" if os.path.exists(thumb_path) else None
+        })
+    return {"status": "success", "items": items}
+
+@router.get("/user/{user_id}/gallery/file/{filename}")
+async def get_user_gallery_file(user_id: str, filename: str):
+    user_dir = _safe_user_dir(user_id)
+    # Prevent path traversal
+    if any(x in filename for x in ('..','/','\\')):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    fpath = os.path.join(user_dir, filename)
+    if not os.path.exists(fpath):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(fpath)
+
+@router.get("/user/{user_id}/gallery/thumb/{filename}")
+async def get_user_gallery_thumb(user_id: str, filename: str):
+    user_dir = _safe_user_dir(user_id)
+    if any(x in filename for x in ('..','/','\\')):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    fpath = os.path.join(user_dir, filename)
+    if not os.path.exists(fpath):
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    return FileResponse(fpath)
+
+class RenameBody(BaseModel):
+    new_name: str
+
+@router.post("/user/{user_id}/gallery/rename/{filename}")
+async def rename_user_gallery_file(user_id: str, filename: str, body: RenameBody):
+    user_dir = _safe_user_dir(user_id)
+    if any(x in filename for x in ('..','/','\\')):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    src = os.path.join(user_dir, filename)
+    if not os.path.exists(src):
+        raise HTTPException(status_code=404, detail="File not found")
+    base, ext = os.path.splitext(filename)
+    safe_new = ''.join(c for c in body.new_name if c.isalnum() or c in ('-','_'))[:60]
+    if not safe_new:
+        raise HTTPException(status_code=400, detail="Invalid new name")
+    dest = os.path.join(user_dir, safe_new + ext)
+    if os.path.exists(dest):
+        raise HTTPException(status_code=400, detail="Target name exists")
+    os.rename(src, dest)
+    # Also rename thumbnail if exists
+    thumb_old = src + '.jpg'
+    thumb_new = dest + '.jpg'
+    if os.path.exists(thumb_old):
+        try: os.rename(thumb_old, thumb_new)
+        except Exception: pass
+    return {"status":"success","old":filename,"new":os.path.basename(dest)}
+
+@router.delete("/user/{user_id}/gallery/file/{filename}")
+async def delete_user_gallery_file(user_id: str, filename: str):
+    user_dir = _safe_user_dir(user_id)
+    if any(x in filename for x in ('..','/','\\')):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    fpath = os.path.join(user_dir, filename)
+    if not os.path.exists(fpath):
+        raise HTTPException(status_code=404, detail="File not found")
+    os.remove(fpath)
+    thumb = fpath + '.jpg'
+    if os.path.exists(thumb):
+        try: os.remove(thumb)
+        except Exception: pass
+    return {"status":"success"}
+
+# Avatar upload
+@router.post("/user/{user_id}/avatar")
+async def upload_avatar(user_id: str, file: UploadFile = File(...)):
+    _safe_user_dir(user_id)  # validate id
+    ext = os.path.splitext(file.filename or '')[1].lower()
+    if ext not in {'.png','.jpg','.jpeg','.webp'}:
+        raise HTTPException(status_code=400, detail="Unsupported format")
+    avatar_dir = settings.AVATARS_DIR
+    os.makedirs(avatar_dir, exist_ok=True)
+    fname = f"{user_id}{ext}"
+    path = os.path.join(avatar_dir, fname)
+    data = await file.read()
+    # Basic size cap 5MB
+    if len(data) > 5*1024*1024:
+        raise HTTPException(status_code=400, detail="File too large")
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.thumbnail((512,512))
+        img.save(path)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image data")
+    # store filename
+    with get_session() as session:
+        u = session.get(User, user_id)
+        if u:
+            u.avatar_filename = fname
+            session.commit()
+    return {"status":"success","avatar_url":f"/api/video/user/{user_id}/avatar"}
+
+@router.get("/user/{user_id}/avatar")
+async def get_avatar(user_id: str):
+    with get_session() as session:
+        u = session.get(User, user_id)
+        if not u or not u.avatar_filename:
+            raise HTTPException(status_code=404, detail="No avatar")
+        path = os.path.join(settings.AVATARS_DIR, u.avatar_filename)
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="No avatar")
+        return FileResponse(path)
