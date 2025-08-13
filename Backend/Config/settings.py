@@ -16,6 +16,7 @@ except Exception:
     # Silent fallback; env vars may already be provided by the host environment.
     pass
 from functools import lru_cache
+import shutil
 
 
 class Settings:
@@ -67,16 +68,87 @@ class Settings:
 
     # ---- External binary resolution ----
     def get_ffmpeg(self) -> str:
-        if os.path.isdir(self.FFMPEG_PATH):
-            return os.path.join(self.FFMPEG_PATH, 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg')
-        return self.FFMPEG_PATH
+        # Sanitize common misconfigurations (e.g., quoted paths)
+        path = (self.FFMPEG_PATH or '').strip()
+        if len(path) >= 2 and path[0] == path[-1] and path[0] in ('"', "'"):
+            path = path[1:-1]
+        # If a directory is provided, point to the binary inside it
+        if os.path.isdir(path):
+            return os.path.join(path, 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg')
+        # If ends with bin (common), join binary even if os.path.isdir cannot verify
+        if os.name == 'nt' and path.lower().rstrip('\\/') .endswith('bin'):
+            return os.path.join(path, 'ffmpeg.exe')
+        # If plain "ffmpeg" but not on PATH, try Windows fallbacks
+        if os.name == 'nt' and path.lower() == 'ffmpeg':
+            # 1) Respect FFMPEG_HOME env var (points to install root)
+            home = os.getenv('FFMPEG_HOME')
+            if home:
+                cand = os.path.join(home, 'bin', 'ffmpeg.exe')
+                if os.path.exists(cand):
+                    return cand
+            # 2) Standard C:\ffmpeg\bin
+            cand = os.path.join('C:\\ffmpeg', 'bin', 'ffmpeg.exe')
+            if os.path.exists(cand):
+                return cand
+            # 3) C:\ffmpeg\<distribution>\bin
+            try:
+                base = 'C:\\ffmpeg'
+                if os.path.isdir(base):
+                    for name in os.listdir(base):
+                        cand = os.path.join(base, name, 'bin', 'ffmpeg.exe')
+                        if os.path.exists(cand):
+                            return cand
+            except Exception:
+                pass
+        # If missing extension but .exe exists next to it, use that (Windows)
+        if os.name == 'nt' and path and not path.lower().endswith('.exe'):
+            cand = path + '.exe'
+            if os.path.exists(cand):
+                return cand
+        # Try PATH resolution as a final fallback
+        found = shutil.which(path)
+        if found:
+            return found
+        return path or 'ffmpeg'
 
     def get_ffprobe(self) -> str:
-        if os.path.isdir(self.FFPROBE_PATH):
-            return os.path.join(self.FFPROBE_PATH, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
-        if self.FFPROBE_PATH == 'ffprobe' and os.path.isdir(self.FFMPEG_PATH):
+        path = (self.FFPROBE_PATH or '').strip()
+        if len(path) >= 2 and path[0] == path[-1] and path[0] in ('"', "'"):
+            path = path[1:-1]
+        if os.path.isdir(path):
+            return os.path.join(path, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
+        if path == 'ffprobe' and os.path.isdir(self.FFMPEG_PATH):
             return os.path.join(self.FFMPEG_PATH, 'ffprobe.exe' if os.name == 'nt' else 'ffprobe')
-        return self.FFPROBE_PATH
+        if os.name == 'nt' and path.lower() == 'ffprobe':
+            home = os.getenv('FFMPEG_HOME')
+            if home:
+                cand = os.path.join(home, 'bin', 'ffprobe.exe')
+                if os.path.exists(cand):
+                    return cand
+            cand = os.path.join('C:\\ffmpeg', 'bin', 'ffprobe.exe')
+            if os.path.exists(cand):
+                return cand
+            try:
+                base = 'C:\\ffmpeg'
+                if os.path.isdir(base):
+                    for name in os.listdir(base):
+                        cand = os.path.join(base, name, 'bin', 'ffprobe.exe')
+                        if os.path.exists(cand):
+                            return cand
+            except Exception:
+                pass
+        # If a bin directory-like string provided
+        if os.name == 'nt' and path.lower().rstrip('\\/') .endswith('bin'):
+            return os.path.join(path, 'ffprobe.exe')
+        # If missing extension but .exe exists next to it, use that (Windows)
+        if os.name == 'nt' and path and not path.lower().endswith('.exe'):
+            cand = path + '.exe'
+            if os.path.exists(cand):
+                return cand
+        found = shutil.which(path)
+        if found:
+            return found
+        return path or 'ffprobe'
 
 
 @lru_cache(maxsize=1)

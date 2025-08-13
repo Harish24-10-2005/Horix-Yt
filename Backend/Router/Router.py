@@ -24,6 +24,7 @@ controller = VideoGenerationController()
 # Pydantic models for request validation
 class VideoModeConfig(BaseModel):
     video_mode: bool = True
+    job_id: Optional[str] = None
 
 class ContentRequest(BaseModel):
     title: str
@@ -56,9 +57,11 @@ class VoiceGenerationRequest(BaseModel):
 class BGMusicRequest(BaseModel):
     music_path: str
     video_mode: bool = True
+    job_id: Optional[str] = None
 
 class CaptionsRequest(BaseModel):
     video_mode: bool = True
+    job_id: Optional[str] = None
 
 class FullPipelineRequest(BaseModel):
     title: str
@@ -248,14 +251,27 @@ async def upload_custom_voice(voice_file: UploadFile = File(...)):
     return {"status": "success", "voice_path": file_path}
 
 @router.post("/edit", response_model=Dict[str, Any])
-async def edit_video(request: VideoModeConfig, background_tasks: BackgroundTasks):
+async def edit_video(request: VideoModeConfig, background_tasks: BackgroundTasks, x_user_id: str | None = Header(default=None, convert_underscores=False)):
     """Edit the final video"""
     # Update global video mode
     controller.set_video_mode(request.video_mode)
     
-    # Run in background task as it might take time
-    await controller.edit_video(request.video_mode)
-    return {"status": "success", "message": "Video editing started in background", "video_mode": request.video_mode}
+    # Try to find the most recent job for this user to associate edit artifacts
+    job_id = request.job_id or None
+    try:
+        if x_user_id:
+            from jobs.job_utils import list_jobs
+            jobs = [j for j in list_jobs(limit=50) if j.get('user_id') == x_user_id]
+            if jobs:
+                jobs.sort(key=lambda j: j.get('created_ts') or 0, reverse=True)
+                job_id = jobs[0]['job_id']
+    except Exception:
+        pass
+    # Run edit now (synchronous) so frontend can proceed to next step when ready
+    result = await controller.edit_video(request.video_mode, job_id=job_id, user_id=x_user_id)
+    if result.get('status') != 'success':
+        raise HTTPException(status_code=500, detail=result.get('message','Edit failed'))
+    return result
 
 @router.post("/upload-music", response_model=Dict[str, Any])
 async def upload_music(music_file: UploadFile = File(...)):
@@ -283,39 +299,53 @@ async def upload_music(music_file: UploadFile = File(...)):
         return {"status": "error", "message": f"Failed to upload music file: {str(e)}"}
     
 @router.post("/bgmusic", response_model=Dict[str, Any])
-async def add_background_music(request: BGMusicRequest, background_tasks: BackgroundTasks):
-    """Add background music to video"""
-    # Check if the file exists
+async def add_background_music(request: BGMusicRequest, x_user_id: str | None = Header(default=None, convert_underscores=False)):
+    """Add background music to video (synchronous, returns artifact)"""
     if not os.path.exists(request.music_path):
         raise HTTPException(status_code=404, detail=f"Music file not found at path: {request.music_path}")
-    
-    # Update global video mode
     controller.set_video_mode(request.video_mode)
-    
+    # Try to resolve a job_id for manifest association
+    job_id = request.job_id or None
     try:
-        # Run in background task as it might take time
-        await controller.add_background_music(request.music_path, request.video_mode)
-        return {
-            "status": "success", 
-            "message": "Background music added successfully", 
-            "video_mode": request.video_mode
-        }
+        from jobs.job_utils import list_jobs
+        jobs = list_jobs(limit=50)
+        if x_user_id:
+            jobs = [j for j in jobs if j.get('user_id') == x_user_id]
+        if jobs:
+            jobs.sort(key=lambda j: j.get('created_ts') or 0, reverse=True)
+            job_id = job_id or jobs[0]['job_id']
+    except Exception:
+        pass
+    try:
+        res = await controller.add_background_music(request.music_path, request.video_mode, job_id=job_id, user_id=x_user_id)
+        if res.get('status') != 'success':
+            raise HTTPException(status_code=500, detail=res.get('message','Music step failed'))
+        return res
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"status": "error", "message": f"Failed to add background music: {str(e)}"}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/captions", response_model=Dict[str, Any])
-async def add_captions(request: CaptionsRequest, background_tasks: BackgroundTasks):
-    """Add captions to video"""
-    # Update global video mode
+async def add_captions(request: CaptionsRequest, x_user_id: str | None = Header(default=None, convert_underscores=False)):
+    """Add captions to video (synchronous, returns artifact)"""
     controller.set_video_mode(request.video_mode)
-    
-    # Run in background task as it might take time
-    background_tasks.add_task(controller.add_captions, request.video_mode)
-    return {
-        "status": "success", 
-        "message": "Adding captions started in background", 
-        "video_mode": request.video_mode
-    }
+    # Resolve job_id like /edit and /bgmusic
+    job_id = request.job_id or None
+    try:
+        from jobs.job_utils import list_jobs
+        jobs = list_jobs(limit=50)
+        if x_user_id:
+            jobs = [j for j in jobs if j.get('user_id') == x_user_id]
+        if jobs:
+            jobs.sort(key=lambda j: j.get('created_ts') or 0, reverse=True)
+            job_id = job_id or jobs[0]['job_id']
+    except Exception:
+        pass
+    res = await controller.add_captions(request.video_mode, job_id=job_id, user_id=x_user_id)
+    if res.get('status') != 'success':
+        raise HTTPException(status_code=500, detail=res.get('message','Captions step failed'))
+    return res
 
 
 @router.get("/video")
@@ -335,11 +365,15 @@ async def get_final_video(file: Optional[str] = Query(None)):
 # -------------------- User Gallery Endpoints --------------------
 
 def _safe_user_dir(user_id: str) -> str:
-    # Basic guard: allow alnum, dash, underscore only
-    import re
-    if not re.fullmatch(r"[A-Za-z0-9_-]+", user_id):
+    """Return a filesystem-safe directory for the given user_id.
+
+    We sanitize rather than reject to support emails and typical IDs.
+    Maps any character not in [A-Za-z0-9._-] to underscore.
+    """
+    safe = ''.join(c if (c.isalnum() or c in '._-') else '_' for c in (user_id or ''))
+    if not safe:
         raise HTTPException(status_code=400, detail="Invalid user id")
-    user_dir = os.path.join(settings.USER_OUTPUT_DIR, user_id)
+    user_dir = os.path.join(settings.USER_OUTPUT_DIR, safe)
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
 

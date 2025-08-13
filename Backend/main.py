@@ -8,6 +8,7 @@ import os
 from Router.Router import router
 from Router.auth import auth_router
 from db.models import init_db
+import asyncio
 
 # Create FastAPI app
 app = FastAPI(
@@ -54,6 +55,29 @@ async def get_home_page(request: Request):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+# On Windows, silence noisy ConnectionResetError from client disconnects (range requests)
+if os.name == "nt":
+    @app.on_event("startup")
+    async def _install_loop_exception_filter() -> None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+        prev = loop.get_exception_handler()
+
+        def handler(loop, context):  # type: ignore[override]
+            exc = context.get("exception")
+            msg = context.get("message", "")
+            if isinstance(exc, ConnectionResetError) or ("WinError 10054" in str(exc) if exc else "WinError 10054" in msg):
+                # Ignore expected disconnect noise on Windows
+                return
+            if prev:
+                prev(loop, context)
+            else:
+                loop.default_exception_handler(context)
+
+        loop.set_exception_handler(handler)
 
 # Run the app
 if __name__ == "__main__":

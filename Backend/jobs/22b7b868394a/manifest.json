@@ -1,0 +1,19 @@
+{
+  "job_id": "22b7b868394a",
+  "title": "u",
+  "video_mode": true,
+  "user_id": "b144d042-149b-4833-a221-1e2875870738",
+  "channel_type": "d",
+  "created_ts": 1755101058.963,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1755101058.985,
+      "info": {
+        "channel_type": "d"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

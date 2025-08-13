@@ -6,11 +6,136 @@ import shutil
 import tempfile
 from Config.settings import settings
 from utils.logging_utils import log_event, StageTimer
+import shutil as _shutil
 
 class VideoEditor:
     def __init__(self,video_mode: bool = False, job_id: str | None = None):
         self.temp_dir = tempfile.mkdtemp()
         self.job_id = job_id
+        # Ensure pydub can locate ffmpeg/ffprobe even if not on PATH (Windows-friendly)
+        try:
+            ffmpeg_bin = settings.get_ffmpeg()
+            ffprobe_bin = settings.get_ffprobe()
+            if ffmpeg_bin:
+                AudioSegment.converter = ffmpeg_bin
+                # Back-compat aliases used by some pydub versions
+                AudioSegment.ffmpeg = ffmpeg_bin  # type: ignore[attr-defined]
+            if ffprobe_bin:
+                AudioSegment.ffprobe = ffprobe_bin  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        # Resolve ffmpeg/ffprobe once and normalize to executables on Windows
+        def _clean(p: str | None) -> str:
+            s = (p or '').strip().strip('"').strip("'")
+            # Remove control chars that can sneak in via env (\r, \n, \t, \f, \b)
+            return s.replace('\r','').replace('\n','').replace('\t','').replace('\f','').replace('\b','')
+
+        self.ffmpeg = _clean(settings.get_ffmpeg())
+        self.ffprobe = _clean(settings.get_ffprobe())
+        def _resolve_win(path: str, exe_name: str) -> str:
+            # Directory -> join exe
+            if os.path.isdir(path):
+                cand = os.path.join(path, exe_name)
+                if os.path.isfile(cand):
+                    return cand
+            # Ends with bin -> join exe (even if os.path.isdir fails due to perms)
+            if path.lower().rstrip('\\/').endswith('bin'):
+                cand = os.path.join(path, exe_name)
+                if os.path.isfile(cand):
+                    return cand
+                return cand  # return joined path regardless; later isfile check will validate
+            # Naked without .exe -> try add
+            if not path.lower().endswith('.exe'):
+                cand = path + '.exe'
+                if os.path.isfile(cand):
+                    return cand
+            # Try FFMPEG_HOME
+            home = os.getenv('FFMPEG_HOME')
+            if home:
+                cand = os.path.join(home, 'bin', exe_name)
+                if os.path.isfile(cand):
+                    return cand
+            # Common C:\ffmpeg locations
+            base = 'C:\\ffmpeg'
+            if os.path.isdir(base):
+                cand = os.path.join(base, 'bin', exe_name)
+                if os.path.isfile(cand):
+                    return cand
+                try:
+                    for name in os.listdir(base):
+                        cand = os.path.join(base, name, 'bin', exe_name)
+                        if os.path.isfile(cand):
+                            return cand
+                except Exception:
+                    pass
+            # PATH
+            found = _shutil.which(exe_name.split('.')[0])
+            if found:
+                return found
+            return path
+
+        try:
+            if os.name == 'nt':
+                self.ffmpeg = _resolve_win(self.ffmpeg, 'ffmpeg.exe')
+                self.ffprobe = _resolve_win(self.ffprobe, 'ffprobe.exe')
+        except Exception:
+            pass
+        try:
+            log_event(job_id, 'edit', 'ffmpeg_resolve', ffmpeg=self.ffmpeg, ffprobe=self.ffprobe)
+        except Exception:
+            pass
+        try:
+            if os.name == 'nt':
+                # Handle bin-suffix without relying on isdir (works even if path checks fail)
+                if self.ffmpeg and self.ffmpeg.lower().rstrip('\\/') .endswith('bin'):
+                    self.ffmpeg = os.path.join(self.ffmpeg, 'ffmpeg.exe')
+                if self.ffprobe and self.ffprobe.lower().rstrip('\\/') .endswith('bin'):
+                    self.ffprobe = os.path.join(self.ffprobe, 'ffprobe.exe')
+                # Append .exe if missing and file exists alongside
+                if self.ffmpeg and not self.ffmpeg.lower().endswith('.exe'):
+                    cand = self.ffmpeg + '.exe'
+                    if os.path.exists(cand):
+                        self.ffmpeg = cand
+                if self.ffprobe and not self.ffprobe.lower().endswith('.exe'):
+                    cand2 = self.ffprobe + '.exe'
+                    if os.path.exists(cand2):
+                        self.ffprobe = cand2
+        except Exception:
+            pass
+        # Now inform pydub and PATH with the finalized executables
+        try:
+            if self.ffmpeg:
+                AudioSegment.converter = self.ffmpeg
+                AudioSegment.ffmpeg = self.ffmpeg  # type: ignore[attr-defined]
+            if self.ffprobe:
+                AudioSegment.ffprobe = self.ffprobe  # type: ignore[attr-defined]
+            for tool in (self.ffmpeg, self.ffprobe):
+                d = os.path.dirname(tool)
+                if d and os.path.isdir(d) and d not in os.environ.get('PATH',''):
+                    os.environ['PATH'] = d + os.pathsep + os.environ.get('PATH','')
+        except Exception:
+            pass
+        # Log raw env-configured paths for diagnostics
+        try:
+            log_event(job_id, 'edit', 'ffmpeg_src', env_ffmpeg=getattr(settings, 'FFMPEG_PATH', None), env_ffprobe=getattr(settings, 'FFPROBE_PATH', None))
+        except Exception:
+            pass
+        # Verify ffmpeg/ffprobe existence to fail fast with a clear message
+        try:
+            if not (self.ffmpeg and os.path.isfile(self.ffmpeg)):
+                raise FileNotFoundError(f"FFmpeg not found at: {self.ffmpeg}")
+            if not (self.ffprobe and os.path.isfile(self.ffprobe)):
+                raise FileNotFoundError(f"FFprobe not found at: {self.ffprobe}")
+        except Exception as e:
+            try:
+                log_event(job_id, 'edit', 'ffmpeg_error', error=str(e), ffmpeg=self.ffmpeg, ffprobe=self.ffprobe)
+            except Exception:
+                pass
+            raise
+        try:
+            log_event(job_id, 'edit', 'ffmpeg', ffmpeg=self.ffmpeg, ffprobe=self.ffprobe)
+        except Exception:
+            pass
         if video_mode:
             self.width = 1920
             self.height = 1080
@@ -105,7 +230,7 @@ class VideoEditor:
             )
 
         zoom_cmd = [
-            settings.get_ffmpeg(), '-y',
+            self.ffmpeg, '-y',
             '-loop', '1',
             '-i', temp_img_path,
             '-t', str(duration),
@@ -117,6 +242,10 @@ class VideoEditor:
             output_path
         ]
         
+        try:
+            log_event(self.job_id, 'edit', 'run_ffmpeg', cmd=zoom_cmd[:8])
+        except Exception:
+            pass
         subprocess.run(zoom_cmd, check=True)
 
     def create_final_video(self, image_dir, voice_dir, video_mode = False):
@@ -155,13 +284,23 @@ class VideoEditor:
                 for seg in image_segments:
                     f.write(f"file '{seg}'\n")
             segment_video = os.path.join(self.temp_dir, f'segment_{voice_idx}.mp4')
-            subprocess.run([
-                settings.get_ffmpeg(), '-y', '-f', 'concat', '-safe', '0', '-i', segment_list, '-c', 'copy', segment_video
-            ], check=True)
+            cmd1 = [
+                self.ffmpeg, '-y', '-f', 'concat', '-safe', '0', '-i', segment_list, '-c', 'copy', segment_video
+            ]
+            try:
+                log_event(self.job_id, 'edit', 'run_ffmpeg', cmd=cmd1[:8])
+            except Exception:
+                pass
+            subprocess.run(cmd1, check=True)
             final_segment = os.path.join(self.temp_dir, f'final_segment_{voice_idx}.mp4')
-            subprocess.run([
-                settings.get_ffmpeg(), '-y', '-i', segment_video, '-i', voice_path, '-c:v', 'copy', '-c:a', 'aac', '-shortest', final_segment
-            ], check=True)
+            cmd2 = [
+                self.ffmpeg, '-y', '-i', segment_video, '-i', voice_path, '-c:v', 'copy', '-c:a', 'aac', '-shortest', final_segment
+            ]
+            try:
+                log_event(self.job_id, 'edit', 'run_ffmpeg', cmd=cmd2[:8])
+            except Exception:
+                pass
+            subprocess.run(cmd2, check=True)
             segments.append(final_segment)
             if voice_idx < len(voice_files) - 1:
                 gap_path = os.path.join(self.temp_dir, f'gap_{voice_idx}.mp4')
@@ -174,9 +313,14 @@ class VideoEditor:
             for segment in segments:
                 f.write(f"file '{segment}'\n")
         log_event(self.job_id, 'edit', 'concat_segments', count=len(segments))
-        subprocess.run([
-            settings.get_ffmpeg(), '-y', '-f', 'concat', '-safe', '0', '-i', final_concat, '-c', 'copy', output_path
-        ], check=True)
+        cmd3 = [
+            self.ffmpeg, '-y', '-f', 'concat', '-safe', '0', '-i', final_concat, '-c', 'copy', output_path
+        ]
+        try:
+            log_event(self.job_id, 'edit', 'run_ffmpeg', cmd=cmd3[:8])
+        except Exception:
+            pass
+        subprocess.run(cmd3, check=True)
         shutil.rmtree(self.temp_dir)
         log_event(self.job_id, 'edit', 'completed', output=output_path)
         return output_path
@@ -184,7 +328,7 @@ class VideoEditor:
     def create_gap(self, output_path):
         """Create a short (20-millisecond) black gap"""
         cmd = [
-            settings.get_ffmpeg(), '-y',
+            self.ffmpeg, '-y',
             '-f', 'lavfi',
             '-i', f'color=c=black:s={self.width}x{self.height}:d=0.01',
             '-c:v', 'libx264',
@@ -192,9 +336,54 @@ class VideoEditor:
             '-pix_fmt', 'yuv420p',
             output_path
         ]
+        try:
+            log_event(self.job_id, 'edit', 'run_ffmpeg', cmd=cmd[:8])
+        except Exception:
+            pass
         subprocess.run(cmd, check=True)
 
 """Video editing utilities for assembling image + voice segments.
 
 Developer note: Removed commented CLI demo block; keep file lean.
 """
+
+# if __name__ == "__main__":
+#     import argparse
+#     import sys
+
+#     parser = argparse.ArgumentParser(description="Self-test for VideoEditor using existing assets")
+#     parser.add_argument("--images", default="assets/images", help="Directory with images")
+#     parser.add_argument("--voices", default="assets/VoiceScripts", help="Directory with voice audio (.wav/.mp3)")
+#     parser.add_argument("--mode", choices=["shorts","standard"], default="shorts", help="Video mode: shorts (1080x1920) or standard (1920x1080)")
+#     parser.add_argument("--job", default="selftest", help="Job id for logging")
+#     args = parser.parse_args()
+
+#     video_mode = True if args.mode == "standard" else False
+#     print("[selftest] Starting VideoEditor")
+#     try:
+#         editor = VideoEditor(video_mode=video_mode, job_id=args.job)
+#         print(f"[selftest] ffmpeg: {editor.ffmpeg}")
+#         print(f"[selftest] ffprobe: {editor.ffprobe}")
+#     except Exception as e:
+#         print(f"[selftest] Failed to initialize editor: {e}")
+#         sys.exit(1)
+
+#     try:
+#         imgs = sorted([f for f in os.listdir(args.images) if f.lower().endswith((".png",".jpg",".jpeg"))])
+#         voices = sorted([f for f in os.listdir(args.voices) if f.lower().endswith((".wav",".mp3"))])
+#         print(f"[selftest] Found {len(imgs)} images in {args.images}")
+#         print(f"[selftest] Found {len(voices)} voice files in {args.voices}")
+#         if not imgs or not voices:
+#             print("[selftest] ERROR: Need at least one image and one voice file.")
+#             sys.exit(2)
+#     except Exception as e:
+#         print(f"[selftest] Failed to list assets: {e}")
+#         sys.exit(3)
+
+#     try:
+#         out = editor.create_final_video(args.images, args.voices, video_mode=video_mode)
+#         print(f"[selftest] Success: {out}")
+#         sys.exit(0)
+#     except Exception as e:
+#         print(f"[selftest] Edit failed: {e}")
+#         sys.exit(4)

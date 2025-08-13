@@ -1,0 +1,48 @@
+{
+  "job_id": "26d6c4dc3cdd",
+  "title": "d",
+  "video_mode": true,
+  "user_id": "b144d042-149b-4833-a221-1e2875870738",
+  "channel_type": null,
+  "created_ts": 1755101914.574,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1755101914.617,
+      "info": {
+        "channel_type": null
+      }
+    },
+    "scripts": {
+      "success": true,
+      "ts": 1755101916.413,
+      "info": {
+        "voice_scripts": 4,
+        "fake": false
+      }
+    },
+    "images": {
+      "success": true,
+      "ts": 1755101919.518,
+      "info": {
+        "count": 3
+      }
+    },
+    "voices": {
+      "success": true,
+      "ts": 1755101937.856,
+      "info": {
+        "count": 10
+      }
+    },
+    "edit": {
+      "success": false,
+      "ts": 1755101951.595,
+      "info": {
+        "error": "[WinError 2] The system cannot find the file specified"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

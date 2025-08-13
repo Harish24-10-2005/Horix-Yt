@@ -11,8 +11,9 @@ export function PipelineProvider({ children }) {
     videoMode: true,
     content: '',
     scripts: { script: '', voiceScripts: [], imagePrompts: [] },
-    images: [],
+  images: [],
     voices: [],
+  jobId: null,
   voiceChoice: '',
   ownVoice: false,
     bgAdded: false,
@@ -45,8 +46,8 @@ export function PipelineProvider({ children }) {
   const generateContent = async () => {
     startLoading('Generating content...');
     try {
-      const data = await api.generateContent({ title: state.title, video_mode: state.videoMode, channel_type: state.channelType || undefined });
-      update({ content: data.content || '', step: 2 });
+  const data = await api.generateContent({ title: state.title, video_mode: state.videoMode, channel_type: state.channelType || undefined });
+  update({ content: data.content || '', step: 2, jobId: data.job_id || state.jobId });
       stopLoading();
     } catch (e) { fail(e, 'Content generation failed'); }
   };
@@ -54,7 +55,7 @@ export function PipelineProvider({ children }) {
   const generateScripts = async () => {
     startLoading('Generating scripts...');
     try {
-      const data = await api.generateScripts({ title: state.title, content: state.content, video_mode: state.videoMode, channel_type: state.channelType || undefined });
+  const data = await api.generateScripts({ title: state.title, content: state.content, video_mode: state.videoMode, channel_type: state.channelType || undefined, job_id: state.jobId || undefined });
       // Normalize image prompts: backend may return image_prompts (array[str]) OR image_prompts_detailed (array[object]{prompt})
       let imagePrompts = data.image_prompts || [];
       if ((!imagePrompts || imagePrompts.length === 0) && Array.isArray(data.image_prompts_detailed)) {
@@ -72,7 +73,7 @@ export function PipelineProvider({ children }) {
   const generateImages = async () => {
     startLoading('Generating images...');
     try {
-      const data = await api.generateImages({ prompts: state.scripts.imagePrompts, video_mode: state.videoMode });
+  const data = await api.generateImages({ prompts: state.scripts.imagePrompts, video_mode: state.videoMode, job_id: state.jobId || undefined });
       const images = (data.image_paths || []).map(p => `${assets.full(p)}?t=${Date.now()}`);
       update({ images, step: 4 });
       stopLoading();
@@ -100,7 +101,7 @@ export function PipelineProvider({ children }) {
       if (ownVoice && customFile) {
         await uploadCustomVoice(customFile);
       }
-      const data = await api.generateVoices({ sentences: state.scripts.voiceScripts, voice: voice || undefined, own_voice: ownVoice, video_mode: state.videoMode });
+  const data = await api.generateVoices({ sentences: state.scripts.voiceScripts, voice: voice || undefined, own_voice: ownVoice, video_mode: state.videoMode, job_id: state.jobId || undefined });
       const rawList = data.voice_paths || data.voice_files || [];
       let list = Array.isArray(rawList) ? rawList : [];
       if (typeof rawList === 'string') {
@@ -116,8 +117,9 @@ export function PipelineProvider({ children }) {
   const editVideo = async () => {
     startLoading('Editing video...');
     try {
-      await api.editVideo({ video_mode: state.videoMode });
-      update({ step: 7 });
+      const res = await api.editVideo({ video_mode: state.videoMode, job_id: state.jobId || undefined });
+      // Optionally record returned path
+      update({ step: 7, finalVideo: res.video_path ? assets.full(res.video_path) : state.finalVideo });
       stopLoading();
     } catch (e) { fail(e, 'Video edit failed'); }
   };

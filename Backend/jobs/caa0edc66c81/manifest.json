@@ -1,0 +1,41 @@
+{
+  "job_id": "caa0edc66c81",
+  "title": "d",
+  "video_mode": true,
+  "user_id": "b144d042-149b-4833-a221-1e2875870738",
+  "channel_type": null,
+  "created_ts": 1755102471.225,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1755102471.342,
+      "info": {
+        "channel_type": null
+      }
+    },
+    "scripts": {
+      "success": true,
+      "ts": 1755102473.461,
+      "info": {
+        "voice_scripts": 4,
+        "fake": false
+      }
+    },
+    "images": {
+      "success": true,
+      "ts": 1755102476.449,
+      "info": {
+        "count": 3
+      }
+    },
+    "edit": {
+      "success": false,
+      "ts": 1755102486.977,
+      "info": {
+        "error": "[WinError 2] The system cannot find the file specified"
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

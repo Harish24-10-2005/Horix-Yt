@@ -1,0 +1,20 @@
+{
+  "job_id": "126804781074",
+  "title": "u",
+  "video_mode": true,
+  "user_id": "b144d042-149b-4833-a221-1e2875870738",
+  "channel_type": "d",
+  "created_ts": 1755101061.077,
+  "stages": {
+    "scripts": {
+      "success": true,
+      "ts": 1755101061.095,
+      "info": {
+        "voice_scripts": 4,
+        "fake": false
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}
