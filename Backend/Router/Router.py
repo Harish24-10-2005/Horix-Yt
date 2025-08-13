@@ -349,18 +349,58 @@ async def add_captions(request: CaptionsRequest, x_user_id: str | None = Header(
 
 
 @router.get("/video")
-async def get_final_video(file: Optional[str] = Query(None)):
-    """Get the final generated video"""
-    # If file parameter is provided, use it, otherwise use the controller's video_mode
+async def get_final_video(file: Optional[str] = Query(None), t: Optional[str] = Query(None)):
+    """Serve a generated video by name with sensible fallbacks to reduce 404s.
+
+    - Respects `file` when present (joined under settings.OUTPUT_DIR).
+    - If missing or not found, falls back to current mode default.
+    - If still not found, serves the most recently modified .mp4 in OUTPUT_DIR.
+    """
+    # Small guard against path traversal
+    if file and any(x in file for x in ("..", "/", "\\")):
+        raise HTTPException(status_code=400, detail="Invalid file name")
+
+    out_dir = settings.OUTPUT_DIR
+    os.makedirs(out_dir, exist_ok=True)
+
+    def _as_path(name: str) -> str:
+        # If already absolute, return as-is; else join under OUTPUT_DIR
+        return name if os.path.isabs(name) else os.path.join(out_dir, name)
+
+    candidates: list[str] = []
     if file:
-        video_path = f"output/{file}"
-    else:
-        video_path = "output/standard_video.mp4" if controller.video_mode else "output/youtube_shorts.mp4"
-    
-    if not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail=f"Video not found at {video_path}")
-    
-    return FileResponse(video_path)
+        candidates.append(_as_path(file))
+    # Default by current mode
+    candidates.append(_as_path("standard_video.mp4" if controller.video_mode else "youtube_shorts.mp4"))
+    # Common alternates
+    candidates.append(_as_path("youtube_shorts_with_music.mp4"))
+    candidates.append(_as_path("output_with_captions.mp4"))
+
+    for p in candidates:
+        if os.path.exists(p):
+            return FileResponse(p)
+
+    # As a last resort, serve the most recent mp4 in OUTPUT_DIR to avoid user-facing errors
+    try:
+        mp4s = [os.path.join(out_dir, f) for f in os.listdir(out_dir) if f.lower().endswith(".mp4")]
+        if mp4s:
+            mp4s.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+            return FileResponse(mp4s[0])
+    except Exception:
+        pass
+
+    # Still nothing; report informative 404 including known files for debugging
+    available = []
+    try:
+        available = [f for f in os.listdir(out_dir) if f.lower().endswith((".mp4",".mov",".webm"))]
+    except Exception:
+        pass
+    raise HTTPException(status_code=404, detail={
+        "message": "Video not found",
+        "requested": file or ("standard_video.mp4" if controller.video_mode else "youtube_shorts.mp4"),
+        "checked": candidates,
+        "available": available,
+    })
 
 # -------------------- User Gallery Endpoints --------------------
 

@@ -37,17 +37,17 @@ class VideoGenerationController:
                 manifest = create_job(title, effective_video_mode, user_id=user_id, channel_type=channel_type)
                 job_id = manifest['job_id']
                 self.active_jobs[job_id] = True
-            # content = ContentGenService(title, effective_video_mode, channel_type)
+            content = ContentGenService(title, effective_video_mode, channel_type)
 # ==============================================fake data ==============================================================
 
             # ORIGINAL IMPLEMENTATION (commented out for fake data mode):
             # content = ContentGenService(title, effective_video_mode, channel_type)
             # FAKE DATA: lightweight deterministic placeholder content
-            content = (
-                f"Overview for '{title}': This is placeholder generated content for testing. "
-                f"Channel type: {channel_type or 'general'}. Video mode: {'standard' if effective_video_mode else 'shorts'}. "
-                "Sections: 1) Hook 2) Main Points 3) Call To Action."
-            )
+            # content = (
+            #     f"Overview for '{title}': This is placeholder generated content for testing. "
+            #     f"Channel type: {channel_type or 'general'}. Video mode: {'standard' if effective_video_mode else 'shorts'}. "
+            #     "Sections: 1) Hook 2) Main Points 3) Call To Action."
+            # )
 # ==============================================fake data ==============================================================
 
             update_stage(job_id, 'content', True, info={"channel_type": channel_type})
@@ -66,38 +66,38 @@ class VideoGenerationController:
                 manifest = create_job(title, effective_video_mode, user_id=user_id, channel_type=channel_type)
                 job_id = manifest['job_id']
                 self.active_jobs[job_id] = True
-            # result = ScriptsGenService(title, content, effective_video_mode, channel_type)
+            result = ScriptsGenService(title, content, effective_video_mode, channel_type)
 
 # ==============================================fake data ==============================================================
             # ORIGINAL IMPLEMENTATION (commented out for fake data mode):
             # result = ScriptsGenService(title, content, effective_video_mode, channel_type)
             # Fake script generation: derive simple segments from title/content
-            base_topic = title or 'Untitled'
-            main_script = (
-                f"INTRO: Welcome! Today we explore {base_topic}.\n"
-                f"POINT 1: Key insight about {base_topic}.\n"
-                f"POINT 2: Another useful fact on {base_topic}.\n"
-                "CALL TO ACTION: Like & Subscribe for more placeholder demos."
-            )
-            # Split voice scripts by lines (excluding empty)
-            voice_scripts = [s.strip() for s in main_script.split('\n') if s.strip()]
-            image_prompts = [
-                f"Cinematic illustration of {base_topic} concept",
-                f"Abstract background representing {base_topic}",
-                f"Engaging infographic about {base_topic}"
-            ]
-            timing_plan = [
-                {"segment": i+1, "seconds": 5} for i in range(len(voice_scripts))
-            ]
-            voice_meta = [{"index": i, "est_duration": 5} for i in range(len(voice_scripts))]
-            result = {
-                "raw_script": main_script,
-                "voice_scripts": voice_scripts,
-                "image_prompts": image_prompts,
-                "voice_meta": voice_meta,
-                "image_prompts_detailed": image_prompts,
-                "timing_plan": timing_plan
-            }
+            # base_topic = title or 'Untitled'
+            # main_script = (
+            #     f"INTRO: Welcome! Today we explore {base_topic}.\n"
+            #     f"POINT 1: Key insight about {base_topic}.\n"
+            #     f"POINT 2: Another useful fact on {base_topic}.\n"
+            #     "CALL TO ACTION: Like & Subscribe for more placeholder demos."
+            # )
+            # # Split voice scripts by lines (excluding empty)
+            # voice_scripts = [s.strip() for s in main_script.split('\n') if s.strip()]
+            # image_prompts = [
+            #     f"Cinematic illustration of {base_topic} concept",
+            #     f"Abstract background representing {base_topic}",
+            #     f"Engaging infographic about {base_topic}"
+            # ]
+            # timing_plan = [
+            #     {"segment": i+1, "seconds": 5} for i in range(len(voice_scripts))
+            # ]
+            # voice_meta = [{"index": i, "est_duration": 5} for i in range(len(voice_scripts))]
+            # result = {
+            #     "raw_script": main_script,
+            #     "voice_scripts": voice_scripts,
+            #     "image_prompts": image_prompts,
+            #     "voice_meta": voice_meta,
+            #     "image_prompts_detailed": image_prompts,
+            #     "timing_plan": timing_plan
+            # }
 # ==============================================fake data ==============================================================
 
             voice_scripts = result.get("voice_scripts", [])
@@ -126,7 +126,7 @@ class VideoGenerationController:
             image_dir = settings.IMAGES_DIR
             os.makedirs(image_dir, exist_ok=True)
             api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
-            # result = ImageGenService(api_key, prompts, effective_video_mode)
+            result = ImageGenService(api_key, prompts, effective_video_mode)
             image_paths = [f"{image_dir}/image_{i}.png" for i in range(1, len(prompts)+1)]
             
             update_stage(job_id, 'images', True, info={"count": len(prompts)}) if job_id else None
@@ -165,37 +165,37 @@ class VideoGenerationController:
             
             voice_dir = settings.VOICES_DIR
             os.makedirs(voice_dir, exist_ok=True)
-            # result = VoiceGenService(sentences, voice)
+            result = VoiceGenService(sentences, voice)
 # ==============================================fake data ==============================================================
 
             # Fake / fallback result: use existing files in VoiceScripts directory (no real TTS)
             # Collect existing audio files
-            existing = [f for f in os.listdir(voice_dir) if f.lower().endswith((".wav", ".mp3"))]
-            files: List[str] = []
-            if existing:
-                files = [os.path.join(voice_dir, f) for f in existing]
-            else:
-                # Create placeholder silent wav files (very small) corresponding to sentences
-                import wave, contextlib
-                import struct
-                sample_rate = 8000
-                duration_sec = 1
-                n_samples = sample_rate * duration_sec
-                for idx, _ in enumerate(sentences or ["placeholder"]):
-                    fname = os.path.join(voice_dir, f"voicescript{idx+1}.wav")
-                    with wave.open(fname, 'w') as wf:
-                        wf.setnchannels(1)
-                        wf.setsampwidth(2)  # 16-bit
-                        wf.setframerate(sample_rate)
-                        silence = struct.pack('<h', 0)
-                        for _ in range(n_samples):
-                            wf.writeframesraw(silence)
-                    files.append(fname)
-            result = {
-                "status": "success",
-                "files": files,
-                "voice_used": voice or "default_fake"
-            }
+            # existing = [f for f in os.listdir(voice_dir) if f.lower().endswith((".wav", ".mp3"))]
+            # files: List[str] = []
+            # if existing:
+            #     files = [os.path.join(voice_dir, f) for f in existing]
+            # else:
+            #     # Create placeholder silent wav files (very small) corresponding to sentences
+            #     import wave, contextlib
+            #     import struct
+            #     sample_rate = 8000
+            #     duration_sec = 1
+            #     n_samples = sample_rate * duration_sec
+            #     for idx, _ in enumerate(sentences or ["placeholder"]):
+            #         fname = os.path.join(voice_dir, f"voicescript{idx+1}.wav")
+            #         with wave.open(fname, 'w') as wf:
+            #             wf.setnchannels(1)
+            #             wf.setsampwidth(2)  # 16-bit
+            #             wf.setframerate(sample_rate)
+            #             silence = struct.pack('<h', 0)
+            #             for _ in range(n_samples):
+            #                 wf.writeframesraw(silence)
+            #         files.append(fname)
+            # result = {
+            #     "status": "success",
+            #     "files": files,
+            #     "voice_used": voice or "default_fake"
+            # }
 # ==============================================fake data ==============================================================
 
             if result.get("status") != "success":
@@ -222,8 +222,8 @@ class VideoGenerationController:
             os.makedirs(output, exist_ok=True)
             effective_video_mode = video_mode if video_mode is not None else self.video_mode
             # Run edit agent and capture output path; pass job_id for logging/manifest correlation
-            # video_path = EditAgentService(video_mode=effective_video_mode, job_id=job_id)
-            video_path = "output/standard_video.mp4"
+            video_path = EditAgentService(video_mode=effective_video_mode, job_id=job_id)
+            # video_path = "output/standard_video.mp4"
             # Archive to per-user gallery if user_id provided
             if user_id:
                 try:
