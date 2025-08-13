@@ -36,15 +36,22 @@ class Settings:
         self.FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
         self.FFPROBE_PATH = os.getenv("FFPROBE_PATH", "ffprobe")
 
-        # ---- Directories ----
-        self.ASSETS_DIR = os.getenv("ASSETS_DIR", "assets")
-        self.IMAGES_DIR = os.getenv("IMAGES_DIR", os.path.join(self.ASSETS_DIR, "images"))
-        self.VOICES_DIR = os.getenv("VOICES_DIR", os.path.join(self.ASSETS_DIR, "VoiceScripts"))
-        self.MUSIC_DIR = os.getenv("MUSIC_DIR", os.path.join(self.ASSETS_DIR, "music"))
-        self.OUTPUT_DIR = os.getenv("OUTPUT_DIR", "output")
-        self.USER_OUTPUT_DIR = os.getenv("USER_OUTPUT_DIR", os.path.join(self.OUTPUT_DIR, "users"))
-        self.AVATARS_DIR = os.getenv("AVATARS_DIR", os.path.join(self.ASSETS_DIR, "avatars"))
-        self.JOBS_DIR = os.getenv("JOBS_DIR", "jobs")
+    # ---- Directories ----
+    # Detect repository root (one level up from Backend/)
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    repo_root = os.path.abspath(os.path.join(backend_dir, ".."))
+    main_assets = os.path.join(repo_root, "assets")
+    # Default assets to the MAIN repo assets folder when present
+    default_assets = main_assets if os.path.isdir(main_assets) else os.path.join(backend_dir, "assets")
+    self.ASSETS_DIR = os.path.abspath(os.getenv("ASSETS_DIR", default_assets))
+    self.IMAGES_DIR = os.path.abspath(os.getenv("IMAGES_DIR", os.path.join(self.ASSETS_DIR, "images")))
+    self.VOICES_DIR = os.path.abspath(os.getenv("VOICES_DIR", os.path.join(self.ASSETS_DIR, "VoiceScripts")))
+    self.MUSIC_DIR = os.path.abspath(os.getenv("MUSIC_DIR", os.path.join(self.ASSETS_DIR, "music")))
+    self.OUTPUT_DIR = os.path.abspath(os.getenv("OUTPUT_DIR", os.path.join(repo_root, "output")))
+    self.USER_OUTPUT_DIR = os.path.abspath(os.getenv("USER_OUTPUT_DIR", os.path.join(self.OUTPUT_DIR, "users")))
+    self.AVATARS_DIR = os.path.abspath(os.getenv("AVATARS_DIR", os.path.join(self.ASSETS_DIR, "avatars")))
+    self.CUSTOM_VOICES_DIR = os.path.abspath(os.getenv("CUSTOM_VOICES_DIR", os.path.join(self.ASSETS_DIR, "custom_voices")))
+    self.JOBS_DIR = os.path.abspath(os.getenv("JOBS_DIR", os.path.join(repo_root, "jobs")))
 
         # ---- Flags ----
         self.CLEAN_ON_START = os.getenv("CLEAN_ON_START", "false").lower() == "true"

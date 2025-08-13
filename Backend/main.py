@@ -7,6 +7,7 @@ import uvicorn
 import os
 from Router.Router import router
 from Router.auth import auth_router
+from Config.settings import settings
 from db.models import init_db
 import asyncio
 
@@ -29,15 +30,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-os.makedirs("static", exist_ok=True)
-os.makedirs("assets/images", exist_ok=True)
-os.makedirs("assets/VoiceScripts", exist_ok=True)
-os.makedirs("output", exist_ok=True)
+# Mount static files (use configured repo-root dirs)
+os.makedirs(settings.ASSETS_DIR, exist_ok=True)
+os.makedirs(settings.IMAGES_DIR, exist_ok=True)
+os.makedirs(settings.VOICES_DIR, exist_ok=True)
+os.makedirs(settings.OUTPUT_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/assets", StaticFiles(directory="assets"), name="assets")
-app.mount("/output", StaticFiles(directory="output"), name="output")
+app.mount("/assets", StaticFiles(directory=settings.ASSETS_DIR), name="assets")
+app.mount("/output", StaticFiles(directory=settings.OUTPUT_DIR), name="output")
 
 # Setup templates
 templates = Jinja2Templates(directory="templates")

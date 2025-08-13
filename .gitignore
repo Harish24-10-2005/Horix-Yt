@@ -1,0 +1,149 @@
+# ---------------------------
+# Global / System
+# ---------------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------------
+# Python Bytecode / Caches
+# ---------------------------
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.cache/
+
+# ---------------------------
+# Virtual Environments
+# (project may keep venvs in Backend/)
+# ---------------------------
+.env
+.env.*
+.venv/
+venv/
+ENV/
+env/
+Backend/.venv/
+Backend/venv/
+Backend/Scripts/
+Backend/Lib/
+Backend/Include/
+Backend/pyvenv.cfg
+
+# ---------------------------
+# Packaging / Build artifacts
+# ---------------------------
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ---------------------------
+# Logs / Temp / Misc
+# ---------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.orig
+
+# Coverage / Reports
+htmlcov/
+coverage.xml
+.coverage*
+
+# ---------------------------
+# Jupyter
+# ---------------------------
+.ipynb_checkpoints/
+
+# ---------------------------
+# IDE / Tooling
+# ---------------------------
+.vscode/
+.idea/
+*.code-workspace
+
+# ---------------------------
+# Media & Generated Outputs
+# ---------------------------
+# Primary output folders (generated videos, images, subtitles, etc.)
+output/
+jobs/
+Backend/output/
+Backend/jobs/
+# Generated or example large media (remove if you want them tracked)
+Backend/assets/images/*
+Backend/assets/VoiceScripts/*
+Backend/assets/music/*
+Backend/assets/avatars/*
+assets/images/*
+assets/VoiceScripts/*
+assets/music/*
+assets/avatars/*
+
+# Subtitles / transcripts
+*.srt
+*.vtt
+
+# Large media types (keep if truly source assets)
+*.mp4
+*.mov
+*.avi
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+
+# Intermediate generation artifacts
+modified_image.png
+music_sync_cache.json
+
+# ---------------------------
+# Static build output
+# ---------------------------
+Frontend/build/
+Frontend/.cache/
+Frontend/.parcel-cache/
+
+# ---------------------------
+# Secrets / Config (adjust carefully)
+# ---------------------------
+*.env
+.env.*
+.envrc
+Backend/.env
+# If Config/LLMs contains API keys or private settings, ignore them:
+Backend/Config/LLMs/*
+
+# Allow a template example to be checked in (uncomment if you add one)
+#!Backend/Config/LLMs/example.config.json
+
+# ---------------------------
+# Node modules
+# ---------------------------
+Frontend/node_modules/
+
+# ---------------------------
+# Misc
+# ---------------------------
+*.crdownload
+*.part
+
+# ---------------------------
+# Local databases
+# ---------------------------
+*.db
+*.sqlite
+*.sqlite3
+Backend/app.db
+
+# END OF FILE

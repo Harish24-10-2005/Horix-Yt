@@ -144,7 +144,7 @@ async def modify_image(request: ImageModificationRequest):
 @router.get("/image/{image_id}")
 async def get_image(image_id: str):
     """Get a generated image by ID"""
-    image_path = f"assets/images/{image_id}.png"
+    image_path = os.path.join(settings.IMAGES_DIR, f"{image_id}.png")
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(image_path)
@@ -240,10 +240,10 @@ async def list_voices():
 @router.post("/custom-voice", response_model=Dict[str, Any])
 async def upload_custom_voice(voice_file: UploadFile = File(...)):
     """Upload a custom voice model"""
-    voice_dir = "assets/custom_voices"
+    voice_dir = settings.CUSTOM_VOICES_DIR
     os.makedirs(voice_dir, exist_ok=True)
     
-    file_path = f"{voice_dir}/{voice_file.filename}"
+    file_path = os.path.join(voice_dir, voice_file.filename)
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(voice_file.file, buffer)
@@ -277,14 +277,14 @@ async def edit_video(request: VideoModeConfig, background_tasks: BackgroundTasks
 async def upload_music(music_file: UploadFile = File(...)):
     """Upload a background music file"""
     try:
-        # Create directory if it doesn't exist
-        music_dir = "assets/music"
+    # Create directory if it doesn't exist
+    music_dir = settings.MUSIC_DIR
         os.makedirs(music_dir, exist_ok=True)
         
         # Generate a unique filename to avoid overwrites
         file_extension = os.path.splitext(music_file.filename)[1]
         unique_filename = f"bgmusic_{os.urandom(4).hex()}{file_extension}"
-        file_path = f"{music_dir}/{unique_filename}"
+    file_path = os.path.join(music_dir, unique_filename)
         
         # Save the uploaded file
         with open(file_path, "wb") as buffer:
