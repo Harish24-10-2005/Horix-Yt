@@ -1,0 +1,48 @@
+{
+  "job_id": "36318f2208ac",
+  "title": "tom and jerry story",
+  "video_mode": true,
+  "user_id": "12187a55-18e3-4354-8a47-a607ea939a3c",
+  "channel_type": "story",
+  "created_ts": 1756361820.089,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1756361820.154,
+      "info": {
+        "channel_type": "story"
+      }
+    },
+    "scripts": {
+      "success": true,
+      "ts": 1756361822.097,
+      "info": {
+        "voice_scripts": 4,
+        "fake": false
+      }
+    },
+    "images": {
+      "success": true,
+      "ts": 1756361824.809,
+      "info": {
+        "count": 3
+      }
+    },
+    "voices": {
+      "success": true,
+      "ts": 1756361978.858,
+      "info": {
+        "count": 10
+      }
+    },
+    "edit": {
+      "success": true,
+      "ts": 1756361994.198,
+      "info": {}
+    }
+  },
+  "artifacts": {
+    "edit": "output/standard_video.mp4"
+  },
+  "complete": false
+}

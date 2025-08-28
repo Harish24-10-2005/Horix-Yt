@@ -1,0 +1,34 @@
+{
+  "job_id": "6fe94addc275",
+  "title": "d",
+  "video_mode": true,
+  "user_id": "12187a55-18e3-4354-8a47-a607ea939a3c",
+  "channel_type": "d",
+  "created_ts": 1756359854.873,
+  "stages": {
+    "content": {
+      "success": true,
+      "ts": 1756359854.975,
+      "info": {
+        "channel_type": "d"
+      }
+    },
+    "scripts": {
+      "success": true,
+      "ts": 1756359856.316,
+      "info": {
+        "voice_scripts": 4,
+        "fake": false
+      }
+    },
+    "images": {
+      "success": true,
+      "ts": 1756359858.944,
+      "info": {
+        "count": 3
+      }
+    }
+  },
+  "artifacts": {},
+  "complete": false
+}

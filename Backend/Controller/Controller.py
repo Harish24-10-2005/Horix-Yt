@@ -127,7 +127,7 @@ class VideoGenerationController:
             os.makedirs(image_dir, exist_ok=True)
             api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
             # result = ImageGenService(api_key, prompts, effective_video_mode)
-            image_paths = [f"{image_dir}/image_{i}.png" for i in range(1, len(prompts)+1)]
+            image_paths = [f"{image_dir}/image_{i}.png" for i in range(1, 31+1)]
             
             update_stage(job_id, 'images', True, info={"count": len(prompts)}) if job_id else None
             return {
