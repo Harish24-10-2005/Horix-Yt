@@ -97,6 +97,11 @@ modified_image.png
 music_sync_cache.json
 
 # ---------------------------
+# Job runtime manifests (generated)
+# ---------------------------
+Backend/jobs/
+
+# ---------------------------
 # Assets (selective)
 # If you have curated assets you WANT in git, remove these lines.
 # assets/music/ and assets/images/ might contain large generated files.
