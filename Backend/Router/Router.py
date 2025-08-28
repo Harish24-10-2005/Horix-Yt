@@ -69,7 +69,6 @@ class FullPipelineRequest(BaseModel):
     voice: Optional[str] = None
     video_mode: bool = True
 
-# Global video mode setting endpoint
 @router.post("/set-video-mode")
 async def set_video_mode(config: VideoModeConfig):
     """Set video mode for the entire process"""
@@ -79,11 +78,10 @@ async def set_video_mode(config: VideoModeConfig):
     controller.set_video_mode(config.video_mode)
     return {"status": "success", "video_mode": config.video_mode}
 
-# Routes
+
 @router.post("/content", response_model=Dict[str, Any])
 async def generate_content(request: ContentRequest, x_user_id: str | None = Header(default=None, convert_underscores=False)):
     """Generate content based on title"""
-    # Update global video mode
     controller.set_video_mode(request.video_mode)
     
     result = await controller.generate_content(
@@ -92,14 +90,12 @@ async def generate_content(request: ContentRequest, x_user_id: str | None = Head
     if result["status"] == "error":
         raise HTTPException(status_code=500, detail=result["message"])
     
-    # Add video_mode to response for client confirmation
     result["video_mode"] = request.video_mode
     return result
 
 @router.post("/scripts", response_model=Dict[str, Any])
 async def generate_scripts(request: ScriptRequest, x_user_id: str | None = Header(default=None, convert_underscores=False)):
     """Generate scripts based on content"""
-    # Update global video mode
     controller.set_video_mode(request.video_mode)
     
     result = await controller.generate_scripts(
@@ -108,7 +104,6 @@ async def generate_scripts(request: ScriptRequest, x_user_id: str | None = Heade
     if result["status"] == "error":
         raise HTTPException(status_code=500, detail=result["message"])
     
-    # Add video_mode to response for client confirmation
     result["video_mode"] = request.video_mode
     return result
 
@@ -122,7 +117,6 @@ async def generate_images(request: ImageGenerationRequest, x_user_id: str | None
     if result["status"] == "error":
         raise HTTPException(status_code=500, detail=result["message"])
     
-    # Add video_mode to response for client confirmation
     result["video_mode"] = request.video_mode
     return result
 
@@ -135,7 +129,6 @@ async def modify_image(request: ImageModificationRequest):
     print(request.image_path)
     print(request.prompt)
     print("=================================")
-    # Update global video mode
     
     result = await controller.modify_image(request.image_path, request.prompt)
     result["modified_image_path"] = request.image_path
@@ -163,7 +156,6 @@ async def generate_voices(request: VoiceGenerationRequest, x_user_id: str | None
     if result.get("status") == "error":
         raise HTTPException(status_code=500, detail=result.get("message", "Voice generation failed"))
     result["video_mode"] = request.video_mode
-    # Provide alias expected by older frontend code
     if "voice_files" in result and "voice_paths" not in result:
         result["voice_paths"] = result["voice_files"]
     return result
@@ -256,7 +248,6 @@ async def edit_video(request: VideoModeConfig, background_tasks: BackgroundTasks
     # Update global video mode
     controller.set_video_mode(request.video_mode)
     
-    # Try to find the most recent job for this user to associate edit artifacts
     job_id = request.job_id or None
     try:
         if x_user_id:
@@ -267,7 +258,6 @@ async def edit_video(request: VideoModeConfig, background_tasks: BackgroundTasks
                 job_id = jobs[0]['job_id']
     except Exception:
         pass
-    # Run edit now (synchronous) so frontend can proceed to next step when ready
     result = await controller.edit_video(request.video_mode, job_id=job_id, user_id=x_user_id)
     if result.get('status') != 'success':
         raise HTTPException(status_code=500, detail=result.get('message','Edit failed'))
@@ -277,21 +267,18 @@ async def edit_video(request: VideoModeConfig, background_tasks: BackgroundTasks
 async def upload_music(music_file: UploadFile = File(...)):
     """Upload a background music file"""
     try:
-    # Create directory if it doesn't exist
-    music_dir = settings.MUSIC_DIR
+        music_dir = settings.MUSIC_DIR
         os.makedirs(music_dir, exist_ok=True)
-        
-        # Generate a unique filename to avoid overwrites
+
         file_extension = os.path.splitext(music_file.filename)[1]
         unique_filename = f"bgmusic_{os.urandom(4).hex()}{file_extension}"
-    file_path = os.path.join(music_dir, unique_filename)
-        
-        # Save the uploaded file
+        file_path = os.path.join(music_dir, unique_filename)
+
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(music_file.file, buffer)
-        
+
         return {
-            "status": "success", 
+            "status": "success",
             "message": "Music file uploaded successfully",
             "music_path": file_path
         }
@@ -304,7 +291,6 @@ async def add_background_music(request: BGMusicRequest, x_user_id: str | None = 
     if not os.path.exists(request.music_path):
         raise HTTPException(status_code=404, detail=f"Music file not found at path: {request.music_path}")
     controller.set_video_mode(request.video_mode)
-    # Try to resolve a job_id for manifest association
     job_id = request.job_id or None
     try:
         from jobs.job_utils import list_jobs
@@ -330,7 +316,6 @@ async def add_background_music(request: BGMusicRequest, x_user_id: str | None = 
 async def add_captions(request: CaptionsRequest, x_user_id: str | None = Header(default=None, convert_underscores=False)):
     """Add captions to video (synchronous, returns artifact)"""
     controller.set_video_mode(request.video_mode)
-    # Resolve job_id like /edit and /bgmusic
     job_id = request.job_id or None
     try:
         from jobs.job_utils import list_jobs
@@ -356,7 +341,6 @@ async def get_final_video(file: Optional[str] = Query(None), t: Optional[str] = 
     - If missing or not found, falls back to current mode default.
     - If still not found, serves the most recently modified .mp4 in OUTPUT_DIR.
     """
-    # Small guard against path traversal
     if file and any(x in file for x in ("..", "/", "\\")):
         raise HTTPException(status_code=400, detail="Invalid file name")
 
@@ -364,15 +348,12 @@ async def get_final_video(file: Optional[str] = Query(None), t: Optional[str] = 
     os.makedirs(out_dir, exist_ok=True)
 
     def _as_path(name: str) -> str:
-        # If already absolute, return as-is; else join under OUTPUT_DIR
         return name if os.path.isabs(name) else os.path.join(out_dir, name)
 
     candidates: list[str] = []
     if file:
         candidates.append(_as_path(file))
-    # Default by current mode
     candidates.append(_as_path("standard_video.mp4" if controller.video_mode else "youtube_shorts.mp4"))
-    # Common alternates
     candidates.append(_as_path("youtube_shorts_with_music.mp4"))
     candidates.append(_as_path("output_with_captions.mp4"))
 
@@ -380,7 +361,6 @@ async def get_final_video(file: Optional[str] = Query(None), t: Optional[str] = 
         if os.path.exists(p):
             return FileResponse(p)
 
-    # As a last resort, serve the most recent mp4 in OUTPUT_DIR to avoid user-facing errors
     try:
         mp4s = [os.path.join(out_dir, f) for f in os.listdir(out_dir) if f.lower().endswith(".mp4")]
         if mp4s:
@@ -389,7 +369,6 @@ async def get_final_video(file: Optional[str] = Query(None), t: Optional[str] = 
     except Exception:
         pass
 
-    # Still nothing; report informative 404 including known files for debugging
     available = []
     try:
         available = [f for f in os.listdir(out_dir) if f.lower().endswith((".mp4",".mov",".webm"))]

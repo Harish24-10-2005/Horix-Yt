@@ -11,17 +11,14 @@ from Config.settings import settings
 from db.models import init_db
 import asyncio
 
-# Create FastAPI app
 app = FastAPI(
     title="Automated Video Generation API",
     description="API for generating YouTube videos using AI",
     version="1.0.0"
 )
 
-# Initialize database (SQLite default; replace with Postgres URL in prod)
 init_db(os.getenv('DATABASE_URL', 'sqlite:///./app.db'))
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -30,7 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files (use configured repo-root dirs)
 os.makedirs(settings.ASSETS_DIR, exist_ok=True)
 os.makedirs(settings.IMAGES_DIR, exist_ok=True)
 os.makedirs(settings.VOICES_DIR, exist_ok=True)
@@ -40,24 +36,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/assets", StaticFiles(directory=settings.ASSETS_DIR), name="assets")
 app.mount("/output", StaticFiles(directory=settings.OUTPUT_DIR), name="output")
 
-# Setup templates
 templates = Jinja2Templates(directory="templates")
 
-# Include API router
 app.include_router(router)
 app.include_router(auth_router)
 
-# Home page
 @app.get("/", response_class=HTMLResponse)
 async def get_home_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# Lightweight health / readiness probe (used by Docker/Orchestrators)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
-# On Windows, silence noisy ConnectionResetError from client disconnects (range requests)
 if os.name == "nt":
     @app.on_event("startup")
     async def _install_loop_exception_filter() -> None:
@@ -67,11 +58,10 @@ if os.name == "nt":
             loop = asyncio.get_event_loop()
         prev = loop.get_exception_handler()
 
-        def handler(loop, context):  # type: ignore[override]
+        def handler(loop, context): 
             exc = context.get("exception")
             msg = context.get("message", "")
             if isinstance(exc, ConnectionResetError) or ("WinError 10054" in str(exc) if exc else "WinError 10054" in msg):
-                # Ignore expected disconnect noise on Windows
                 return
             if prev:
                 prev(loop, context)
@@ -80,6 +70,5 @@ if os.name == "nt":
 
         loop.set_exception_handler(handler)
 
-# Run the app
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

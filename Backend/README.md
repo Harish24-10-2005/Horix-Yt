@@ -109,8 +109,3 @@ Mounts persist `output/`, `assets/`, `jobs/` between restarts.
 | Slow first thumbnail | First decode | Subsequent hits cached file |
 | 401 auth failures | Expired token | Re-login & resend Authorization header |
 
-## 13. License
-MIT (adjust as needed).
-
----
-For UI & usage patterns see root README and `Frontend/README.md`.

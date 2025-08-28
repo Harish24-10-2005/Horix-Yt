@@ -1,24 +1,28 @@
-version: '3.9'
 services:
   backend:
     build:
       context: .
       dockerfile: Backend/Dockerfile
     container_name: horix-backend
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GROQ_API_KEY1: ${GROQ_API_KEY1}
+      GROQ_API_KEY2: ${GROQ_API_KEY2}
+      GROQ_API_KEY3: ${GROQ_API_KEY3}
+      FFMPEG_PATH: ffmpeg
+      FFPROBE_PATH: ffprobe
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./app.db}
+      ASSETS_DIR: /app/assets
+      OUTPUT_DIR: /app/output
+      JOBS_DIR: /app/jobs
+      USER_OUTPUT_DIR: /app/output/users
+      AVATARS_DIR: /app/assets/avatars
+    volumes:
+      - ./output:/app/output
+      - ./assets:/app/assets
+      - ./jobs:/app/jobs
     ports:
       - "8000:8000"
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GROQ_API_KEY1=${GROQ_API_KEY1}
-      - GROQ_API_KEY2=${GROQ_API_KEY2}
-      - GROQ_API_KEY3=${GROQ_API_KEY3}
-      - FFMPEG_PATH=ffmpeg
-      - FFPROBE_PATH=ffprobe
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./app.db}
-    volumes:
-      - output_data:/app/output
-      - assets_data:/app/assets
-      - jobs_data:/app/jobs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -36,17 +40,14 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      REACT_APP_AUTH_BASE: http://localhost:8000/api/auth
     ports:
       - "3000:80"
-    environment:
-      - REACT_APP_AUTH_BASE=http://localhost:8000/api/auth
     restart: unless-stopped
 
 networks:
   default:
     name: horix-net
 
-volumes:
-  output_data:
-  assets_data:
-  jobs_data:
+volumes: {}
