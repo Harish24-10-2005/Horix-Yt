@@ -66,38 +66,38 @@ class VideoGenerationController:
                 manifest = create_job(title, effective_video_mode, user_id=user_id, channel_type=channel_type)
                 job_id = manifest['job_id']
                 self.active_jobs[job_id] = True
-            result = ScriptsGenService(title, content, effective_video_mode, channel_type)
+            # result = ScriptsGenService(title, content, effective_video_mode, channel_type)
 
 # ==============================================fake data ==============================================================
             # ORIGINAL IMPLEMENTATION (commented out for fake data mode):
             # result = ScriptsGenService(title, content, effective_video_mode, channel_type)
             # Fake script generation: derive simple segments from title/content
-            # base_topic = title or 'Untitled'
-            # main_script = (
-            #     f"INTRO: Welcome! Today we explore {base_topic}.\n"
-            #     f"POINT 1: Key insight about {base_topic}.\n"
-            #     f"POINT 2: Another useful fact on {base_topic}.\n"
-            #     "CALL TO ACTION: Like & Subscribe for more placeholder demos."
-            # )
-            # # Split voice scripts by lines (excluding empty)
-            # voice_scripts = [s.strip() for s in main_script.split('\n') if s.strip()]
-            # image_prompts = [
-            #     f"Cinematic illustration of {base_topic} concept",
-            #     f"Abstract background representing {base_topic}",
-            #     f"Engaging infographic about {base_topic}"
-            # ]
-            # timing_plan = [
-            #     {"segment": i+1, "seconds": 5} for i in range(len(voice_scripts))
-            # ]
-            # voice_meta = [{"index": i, "est_duration": 5} for i in range(len(voice_scripts))]
-            # result = {
-            #     "raw_script": main_script,
-            #     "voice_scripts": voice_scripts,
-            #     "image_prompts": image_prompts,
-            #     "voice_meta": voice_meta,
-            #     "image_prompts_detailed": image_prompts,
-            #     "timing_plan": timing_plan
-            # }
+            base_topic = title or 'Untitled'
+            main_script = (
+                f"INTRO: Welcome! Today we explore {base_topic}.\n"
+                f"POINT 1: Key insight about {base_topic}.\n"
+                f"POINT 2: Another useful fact on {base_topic}.\n"
+                "CALL TO ACTION: Like & Subscribe for more placeholder demos."
+            )
+            # Split voice scripts by lines (excluding empty)
+            voice_scripts = [s.strip() for s in main_script.split('\n') if s.strip()]
+            image_prompts = [
+                f"Cinematic illustration of {base_topic} concept",
+                f"Abstract background representing {base_topic}",
+                f"Engaging infographic about {base_topic}"
+            ]
+            timing_plan = [
+                {"segment": i+1, "seconds": 5} for i in range(len(voice_scripts))
+            ]
+            voice_meta = [{"index": i, "est_duration": 5} for i in range(len(voice_scripts))]
+            result = {
+                "raw_script": main_script,
+                "voice_scripts": voice_scripts,
+                "image_prompts": image_prompts,
+                "voice_meta": voice_meta,
+                "image_prompts_detailed": image_prompts,
+                "timing_plan": timing_plan
+            }
 # ==============================================fake data ==============================================================
 
             voice_scripts = result.get("voice_scripts", [])
@@ -126,14 +126,39 @@ class VideoGenerationController:
             image_dir = settings.IMAGES_DIR
             os.makedirs(image_dir, exist_ok=True)
             api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
-            result = ImageGenService(api_key, prompts, effective_video_mode)
-            image_paths = [f"{image_dir}/image_{i}.png" for i in range(1, len(prompts)+1)]
+            # result = ImageGenService(api_key, prompts, effective_video_mode)
+            image_paths_abs = [os.path.join(image_dir, f"image_{i}.png") for i in range(1, 30+1)]
+            # Ensure files exist (placeholder) so frontend doesn't 404 while real generation is stubbed
+            for p in image_paths_abs:
+                if not os.path.exists(p):
+                    try:
+                        with open(p, 'wb') as f:
+                            f.write(b'')
+                    except Exception:
+                        pass
+            # Convert absolute paths to web-relative (mounted under /assets)
+            # If IMAGES_DIR ends with /assets/images, strip that root
+            rel_paths: list[str] = []
+            assets_root = settings.ASSETS_DIR
+            for abs_path in image_paths_abs:
+                try:
+                    rel = abs_path
+                    if abs_path.startswith(assets_root):
+                        rel = abs_path[len(assets_root):].lstrip('/\\')  # path inside assets
+                        # Avoid f-string expression with backslashes; do replacement outside
+                        rel = "/assets/" + rel.replace("\\", "/")
+                    else:
+                        # Fallback: just expose filename under /assets/images
+                        rel = f"/assets/images/{os.path.basename(abs_path)}"
+                    rel_paths.append(rel)
+                except Exception:
+                    rel_paths.append(f"/assets/images/{os.path.basename(abs_path)}")
             
             update_stage(job_id, 'images', True, info={"count": len(prompts)}) if job_id else None
             return {
                 "status": "success", 
                 "message": "result",
-                "image_paths": image_paths,
+                "image_paths": rel_paths,
                 "video_mode": effective_video_mode,
                 "job_id": job_id
             }
@@ -165,46 +190,61 @@ class VideoGenerationController:
             
             voice_dir = settings.VOICES_DIR
             os.makedirs(voice_dir, exist_ok=True)
-            result = VoiceGenService(sentences, voice)
+            # result = VoiceGenService(sentences, voice)
 # ==============================================fake data ==============================================================
 
             # Fake / fallback result: use existing files in VoiceScripts directory (no real TTS)
             # Collect existing audio files
-            # existing = [f for f in os.listdir(voice_dir) if f.lower().endswith((".wav", ".mp3"))]
-            # files: List[str] = []
-            # if existing:
-            #     files = [os.path.join(voice_dir, f) for f in existing]
-            # else:
-            #     # Create placeholder silent wav files (very small) corresponding to sentences
-            #     import wave, contextlib
-            #     import struct
-            #     sample_rate = 8000
-            #     duration_sec = 1
-            #     n_samples = sample_rate * duration_sec
-            #     for idx, _ in enumerate(sentences or ["placeholder"]):
-            #         fname = os.path.join(voice_dir, f"voicescript{idx+1}.wav")
-            #         with wave.open(fname, 'w') as wf:
-            #             wf.setnchannels(1)
-            #             wf.setsampwidth(2)  # 16-bit
-            #             wf.setframerate(sample_rate)
-            #             silence = struct.pack('<h', 0)
-            #             for _ in range(n_samples):
-            #                 wf.writeframesraw(silence)
-            #         files.append(fname)
-            # result = {
-            #     "status": "success",
-            #     "files": files,
-            #     "voice_used": voice or "default_fake"
-            # }
+            existing = [f for f in os.listdir(voice_dir) if f.lower().endswith((".wav", ".mp3"))]
+            files: List[str] = []
+            if existing:
+                files = [os.path.join(voice_dir, f) for f in existing]
+            else:
+                # Create placeholder silent wav files (very small) corresponding to sentences
+                import wave, contextlib
+                import struct
+                sample_rate = 8000
+                duration_sec = 1
+                n_samples = sample_rate * duration_sec
+                for idx, _ in enumerate(sentences or ["placeholder"]):
+                    fname = os.path.join(voice_dir, f"voicescript{idx+1}.wav")
+                    with wave.open(fname, 'w') as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)  # 16-bit
+                        wf.setframerate(sample_rate)
+                        silence = struct.pack('<h', 0)
+                        for _ in range(n_samples):
+                            wf.writeframesraw(silence)
+                    files.append(fname)
+            result = {
+                "status": "success",
+                "files": files,
+                "voice_used": voice or "default_fake"
+            }
 # ==============================================fake data ==============================================================
 
             if result.get("status") != "success":
                 update_stage(job_id, 'voices', False, info={"error": result.get('message')}) if job_id else None
                 return {"status": "error", "message": result.get("message", "Voice generation failed"), "job_id": job_id}
             update_stage(job_id, 'voices', True, info={"count": len(result.get('files', []))}) if job_id else None
+            # Convert absolute file paths to web-relative paths under /assets for frontend
+            rel_voice_paths: list[str] = []
+            assets_root = settings.ASSETS_DIR
+            for abs_path in result.get('files', []) or []:
+                try:
+                    rel = abs_path
+                    if abs_path.startswith(assets_root):
+                        rel = abs_path[len(assets_root):].lstrip('/\\')
+                        rel = "/assets/" + rel.replace("\\", "/")
+                    else:
+                        rel = f"/assets/VoiceScripts/{os.path.basename(abs_path)}"
+                    rel_voice_paths.append(rel)
+                except Exception:
+                    rel_voice_paths.append(f"/assets/VoiceScripts/{os.path.basename(abs_path)}")
             return {
                 "status": "success",
                 "voice_files": result.get("files", []),
+                "voice_paths": rel_voice_paths,
                 "voice_used": result.get("voice_used"),
                 "own": False,
                 "video_mode": effective_video_mode,
@@ -221,9 +261,48 @@ class VideoGenerationController:
             output = settings.OUTPUT_DIR
             os.makedirs(output, exist_ok=True)
             effective_video_mode = video_mode if video_mode is not None else self.video_mode
-            # Run edit agent and capture output path; pass job_id for logging/manifest correlation
-            video_path = EditAgentService(video_mode=effective_video_mode, job_id=job_id)
-            # video_path = "output/standard_video.mp4"
+
+            # Determine target filename by mode
+            base_name = "standard_video.mp4" if effective_video_mode else "youtube_shorts.mp4"
+            out_abs = os.path.join(output, base_name)
+
+            # Generate a small placeholder MP4 if it doesn't exist yet
+            if not os.path.exists(out_abs):
+                try:
+                    import subprocess
+                    ffmpeg = settings.get_ffmpeg()
+                    # Choose resolution by mode (16:9 vs 9:16)
+                    size = "1280x720" if effective_video_mode else "720x1280"
+                    cmd = [
+                        ffmpeg, "-y",
+                        "-f", "lavfi", "-i", f"color=c=black:s={size}:d=2",
+                        "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+                        "-shortest",
+                        "-c:v", "libx264", "-tune", "stillimage", "-pix_fmt", "yuv420p",
+                        "-c:a", "aac",
+                        "-movflags", "+faststart",
+                        out_abs,
+                    ]
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except Exception:
+                    # Final fallback: create empty file placeholder (may not play but unblocks flow)
+                    try:
+                        with open(out_abs, 'wb') as f:
+                            f.write(b'')
+                    except Exception:
+                        pass
+
+            # Ensure both names exist to satisfy frontend requests irrespective of mode
+            try:
+                alt_name = "youtube_shorts.mp4" if base_name == "standard_video.mp4" else "standard_video.mp4"
+                alt_abs = os.path.join(output, alt_name)
+                if os.path.exists(out_abs) and not os.path.exists(alt_abs):
+                    shutil.copy2(out_abs, alt_abs)
+            except Exception:
+                pass
+
+            video_path = out_abs  # absolute path for artifact
+
             # Archive to per-user gallery if user_id provided
             if user_id:
                 try:
@@ -231,15 +310,13 @@ class VideoGenerationController:
                     safe_dir = os.path.join(global_settings.USER_OUTPUT_DIR, user_id)
                     os.makedirs(safe_dir, exist_ok=True)
                     if os.path.exists(video_path):
-                        base_name = os.path.basename(video_path)
-                        # Timestamped copy to avoid overwrite
                         ts = uuid.uuid4().hex[:8]
-                        target_name = f"{ts}_{base_name}"
+                        target_name = f"{ts}_{os.path.basename(video_path)}"
                         target_path = os.path.join(safe_dir, target_name)
                         shutil.copy2(video_path, target_path)
                 except Exception:
                     pass  # Non-fatal
-            
+
             update_stage(job_id, 'edit', True, artifact=video_path) if job_id else None
             return {
                 "status": "success", 
@@ -257,6 +334,16 @@ class VideoGenerationController:
         try:
             effective_video_mode = video_mode if video_mode is not None else self.video_mode
             final_video = BgMusicGenService(music_path)
+            # Create a predictable alias file so frontend can find it reliably
+            try:
+                if final_video and os.path.exists(final_video):
+                    out_dir = settings.OUTPUT_DIR
+                    os.makedirs(out_dir, exist_ok=True)
+                    alias = os.path.join(out_dir, "youtube_shorts_with_music.mp4")
+                    if os.path.abspath(final_video) != os.path.abspath(alias):
+                        shutil.copy2(final_video, alias)
+            except Exception:
+                pass
             # Archive to per-user gallery if user_id provided
             if user_id and final_video and os.path.exists(final_video):
                 try:
@@ -290,6 +377,16 @@ class VideoGenerationController:
             # CaptionGenService might adjust caption style based on video_mode
             try:
                 captioned_video = CaptionGenService(job_id=job_id, video_mode=effective_video_mode)
+                # Create a predictable alias for captioned video if it's an mp4
+                try:
+                    if captioned_video and os.path.exists(captioned_video) and captioned_video.lower().endswith('.mp4'):
+                        out_dir = settings.OUTPUT_DIR
+                        os.makedirs(out_dir, exist_ok=True)
+                        alias = os.path.join(out_dir, "output_with_glowing_captions.mp4")
+                        if os.path.abspath(captioned_video) != os.path.abspath(alias):
+                            shutil.copy2(captioned_video, alias)
+                except Exception:
+                    pass
                 # Archive to per-user gallery if user_id provided
                 if user_id and captioned_video and os.path.exists(captioned_video):
                     try:

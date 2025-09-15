@@ -8,14 +8,14 @@ from io import BytesIO
 import base64
 
 class ImageGenerator:
-    def __init__(self, api_key, model="gemini-2.0-flash-exp-image-generation", 
+    def __init__(self, api_key, model="gemini-2.5-flash-image-preview", 
                  width=1920, height=1080, output_dir="assets/images", video_mode: bool = False):
         """
         Initialize the ImageGenerator with a Google API key and configuration options.
         
         Args:
             api_key (str): Google Generative AI API key.
-            model (str): Model name, defaults to "gemini-2.0-flash-exp-image-generation".
+            model (str): Model name, defaults to "gemini-2.5-flash-image-preview".
             width (int): Target width of output images.
             height (int): Target height of output images.
             output_dir (str): Directory to save generated images.

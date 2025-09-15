@@ -156,8 +156,22 @@ async def generate_voices(request: VoiceGenerationRequest, x_user_id: str | None
     if result.get("status") == "error":
         raise HTTPException(status_code=500, detail=result.get("message", "Voice generation failed"))
     result["video_mode"] = request.video_mode
+    # Normalize voice_paths to web-relative under /assets when needed
     if "voice_files" in result and "voice_paths" not in result:
-        result["voice_paths"] = result["voice_files"]
+        voice_paths: list[str] = []
+        assets_root = settings.ASSETS_DIR
+        for p in result.get("voice_files", []) or []:
+            try:
+                rel = p
+                if p.startswith(assets_root):
+                    rel = p[len(assets_root):].lstrip('/\\')
+                    rel = "/assets/" + rel.replace("\\", "/")
+                else:
+                    rel = f"/assets/VoiceScripts/{os.path.basename(p)}"
+                voice_paths.append(rel)
+            except Exception:
+                voice_paths.append(f"/assets/VoiceScripts/{os.path.basename(p)}")
+        result["voice_paths"] = voice_paths
     return result
 
 @router.get("/jobs/{job_id}", response_model=Dict[str, Any])
@@ -355,7 +369,9 @@ async def get_final_video(file: Optional[str] = Query(None), t: Optional[str] = 
         candidates.append(_as_path(file))
     candidates.append(_as_path("standard_video.mp4" if controller.video_mode else "youtube_shorts.mp4"))
     candidates.append(_as_path("youtube_shorts_with_music.mp4"))
+    # Support both captions aliases
     candidates.append(_as_path("output_with_captions.mp4"))
+    candidates.append(_as_path("output_with_glowing_captions.mp4"))
 
     for p in candidates:
         if os.path.exists(p):
