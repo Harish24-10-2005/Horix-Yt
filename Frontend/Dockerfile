@@ -1,7 +1,11 @@
 # Frontend Dockerfile
 FROM node:20-alpine AS build
 ARG REACT_APP_AUTH_BASE
+ARG REACT_APP_API_BASE
+ARG REACT_APP_ASSET_BASE
 ENV REACT_APP_AUTH_BASE=${REACT_APP_AUTH_BASE}
+ENV REACT_APP_API_BASE=${REACT_APP_API_BASE}
+ENV REACT_APP_ASSET_BASE=${REACT_APP_ASSET_BASE}
 WORKDIR /app
 COPY Frontend/package.json Frontend/package-lock.json* ./
 RUN npm install --legacy-peer-deps || yarn install --frozen-lockfile || true

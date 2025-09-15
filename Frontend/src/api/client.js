@@ -1,5 +1,7 @@
 // Centralized API client for backend collaboration
-const DEFAULT_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000/api/video';
+const DEFAULT_BASE = (typeof process.env.REACT_APP_API_BASE === 'string' && process.env.REACT_APP_API_BASE !== '')
+  ? process.env.REACT_APP_API_BASE
+  : 'http://localhost:8000/api/video';
 
 async function request(path, { method = 'GET', headers = {}, body, json = true, formData } = {}) {
   const url = `${DEFAULT_BASE}${path}`;
@@ -51,11 +53,15 @@ export const api = {
   addCaptions: (payload) => request('/captions', { method: 'POST', body: payload }),
 };
 
+const RAW_ASSET_BASE = process.env.REACT_APP_ASSET_BASE;
 export const assets = {
-  base: (process.env.REACT_APP_ASSET_BASE || 'http://localhost:8000'),
+  // If env is defined (even empty string), respect it; else fallback to localhost
+  base: (typeof RAW_ASSET_BASE === 'string') ? RAW_ASSET_BASE : 'http://localhost:8000',
   full: (p) => {
     if (!p) return '';
     if (p.startsWith('http://') || p.startsWith('https://')) return p;
-    return `${assets.base}${p.startsWith('/') ? '' : '/'}${p}`;
+    // Support empty base for same-origin
+    const base = assets.base || '';
+    return `${base}${p.startsWith('/') ? '' : '/'}${p}`;
   }
 };

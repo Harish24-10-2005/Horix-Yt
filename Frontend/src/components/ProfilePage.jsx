@@ -6,6 +6,10 @@ import { ApiKeysPanel } from './ApiKeysPanel';
 import { useAuth } from '../context/AuthContext';
 // Removed unused icon imports (FiTrash2, FiImage, FiType)
 
+// API and Asset bases (env-driven with localhost fallbacks)
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8000/api/video';
+const ASSET_BASE = process.env.REACT_APP_ASSET_BASE || 'http://localhost:8000';
+
 // Animations & helpers
 const fade = { initial:{opacity:0,y:16}, animate:{opacity:1,y:0}, exit:{opacity:0,y:-10} };
 const glow = keyframes`0%,100%{opacity:.25;transform:translate3d(0,0,0);}50%{opacity:.6;transform:translate3d(0,-12px,0);}`;
@@ -108,10 +112,10 @@ export function ProfilePage(){
     // Attempt to load avatar
     try {
       if(user?.user_id){
-        const res = await fetch(`http://localhost:8000/api/video/user/${user.user_id}/avatar`);
+        const res = await fetch(`${API_BASE}/user/${user.user_id}/avatar`);
         if(res.ok){
           // Cache-bust by appending timestamp (avoid stale image)
-            setAvatarUrl(`http://localhost:8000/api/video/user/${user.user_id}/avatar?t=${Date.now()}`);
+            setAvatarUrl(`${API_BASE}/user/${user.user_id}/avatar?t=${Date.now()}`);
         }
       }
     } catch { /* ignore */ }
@@ -136,7 +140,7 @@ export function ProfilePage(){
               avatarUrl ? <img src={avatarUrl} alt="avatar" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:36}} /> : <AvatarInitial>{initial}</AvatarInitial>
             )}
             <AvatarBadge whileTap={{scale:.9}} whileHover={{scale:1.05}} onClick={()=> document.getElementById('avatarInput')?.click()}>{<FiEdit2 size={14}/> } Edit</AvatarBadge>
-            <input id="avatarInput" type="file" accept="image/*" style={{display:'none'}} onChange={async e=>{ const file=e.target.files?.[0]; if(!file) return; const fd=new FormData(); fd.append('file',file); try { const r= await fetch(`http://localhost:8000/api/video/user/${user.user_id}/avatar`,{method:'POST',body:fd}); if(r.ok){ pushToast('Avatar updated'); setAvatarUrl(`http://localhost:8000/api/video/user/${user.user_id}/avatar?t=${Date.now()}`); } else pushToast('Avatar upload failed','error'); } catch{ pushToast('Avatar upload failed','error'); } finally { e.target.value=''; }}} />
+            <input id="avatarInput" type="file" accept="image/*" style={{display:'none'}} onChange={async e=>{ const file=e.target.files?.[0]; if(!file) return; const fd=new FormData(); fd.append('file',file); try { const r= await fetch(`${API_BASE}/user/${user.user_id}/avatar`,{method:'POST',body:fd}); if(r.ok){ pushToast('Avatar updated'); setAvatarUrl(`${API_BASE}/user/${user.user_id}/avatar?t=${Date.now()}`); } else pushToast('Avatar upload failed','error'); } catch{ pushToast('Avatar upload failed','error'); } finally { e.target.value=''; }}} />
           </AvatarWrap>
           <HeadInfo>
             <NameRow>
@@ -280,12 +284,12 @@ function GalleryPanel({ user, pushToast }){
    };
 
    useEffect(()=> () => { retryTimers.current.forEach(t=>clearTimeout(t)); },[]);
-  useEffect(()=>{ (async()=>{ if(!user) return; setLoading(true); try { const r = await fetch(`http://localhost:8000/api/video/user/${user.user_id}/gallery`); const j = await r.json(); if(j.items) setItems(j.items); } catch(e){ pushToast('Gallery load failed','error'); } finally { setLoading(false); } })(); },[user,pushToast]);
+  useEffect(()=>{ (async()=>{ if(!user) return; setLoading(true); try { const r = await fetch(`${API_BASE}/user/${user.user_id}/gallery`); const j = await r.json(); if(j.items) setItems(j.items); } catch(e){ pushToast('Gallery load failed','error'); } finally { setLoading(false); } })(); },[user,pushToast]);
    const doDelete = (name)=>{ if(!window.confirm('Delete '+name+' ?')) return; // optimistic removal
      const snapshot = items;
      setItems(it=> it.filter(x=>x.name!==name));
      fetchWithRetry(
-       () => fetch(`http://localhost:8000/api/video/user/${user.user_id}/gallery/file/${name}`,{method:'DELETE'}).then(r=> r.ok || false),
+  () => fetch(`${API_BASE}/user/${user.user_id}/gallery/file/${name}`,{method:'DELETE'}).then(r=> r.ok || false),
        'delete:'+name,
        () => { pushToast('Deleted','ok'); },
        () => { setItems(snapshot); }
@@ -297,7 +301,7 @@ function GalleryPanel({ user, pushToast }){
      setItems(list=> list.map(x=> x.name===orig? {...x, name: baseNew + orig.slice(orig.lastIndexOf('.'))}:x));
      setRenaming(null);
      fetchWithRetry(
-       () => fetch(`http://localhost:8000/api/video/user/${user.user_id}/gallery/rename/${orig}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_name:baseNew})})
+  () => fetch(`${API_BASE}/user/${user.user_id}/gallery/rename/${orig}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_name:baseNew})})
               .then(async r=> r.ok ? await r.json() : false),
        'rename:'+orig,
        (data) => { if(data?.new){ setItems(list=> list.map(x=> x.name=== (baseNew + orig.slice(orig.lastIndexOf('.')))? {...x,name:data.new}:x)); pushToast('Renamed','ok'); }},
@@ -315,7 +319,7 @@ function GalleryPanel({ user, pushToast }){
          <GalleryGrid>
            {items.map(it => (
              <GalleryItem key={it.name} onClick={()=> setOpen(it)} whileHover={{scale:1.03}} whileTap={{scale:.97}}>
-              <Thumb style={it.thumbnail? {background:`url(http://localhost:8000${it.thumbnail}) center/cover`,backgroundSize:'cover', position:'relative'} : {position:'relative'}}>
+              <Thumb style={it.thumbnail? {background:`url(${ASSET_BASE}${it.thumbnail}) center/cover`,backgroundSize:'cover', position:'relative'} : {position:'relative'}}>
                 {!it.thumbnail && (it.name.toLowerCase().endsWith('.mp4')? '🎬':'📄')}
                 {pending['rename:'+it.name] && <span style={{position:'absolute',top:4,right:6,fontSize:9,letterSpacing:'.1em',background:'rgba(0,0,0,.55)',padding:'2px 4px',borderRadius:6}}>RENAMING…</span>}
                 {pending['delete:'+it.name] && <span style={{position:'absolute',top:4,left:6,fontSize:9,letterSpacing:'.1em',background:'rgba(0,0,0,.55)',padding:'2px 4px',borderRadius:6}}>DELETING…</span>}
@@ -355,9 +359,9 @@ function GalleryPanel({ user, pushToast }){
               </ModalHead>
               <div style={{padding:'1rem 1.25rem 1.6rem',display:'flex',flexDirection:'column',gap:'1rem'}}>
                 {open.name.toLowerCase().endsWith('.mp4') ? (
-                  <video style={{width:'100%',borderRadius:18,background:'#000'}} controls src={`http://localhost:8000${open.url}`}></video>
+                  <video style={{width:'100%',borderRadius:18,background:'#000'}} controls src={`${ASSET_BASE}${open.url}`}></video>
                 ) : (
-                  <a href={`http://localhost:8000${open.url}`} target="_blank" rel="noreferrer" style={{color:'#7f5af0'}}>Open File</a>
+                  <a href={`${ASSET_BASE}${open.url}`} target="_blank" rel="noreferrer" style={{color:'#7f5af0'}}>Open File</a>
                 )}
               </div>
             </Modal>
